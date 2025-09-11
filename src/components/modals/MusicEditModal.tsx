@@ -135,7 +135,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     }
     try {
       setAddingCategory(true)
-      const res = await fetch('/admin/musics/categories', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const res = await fetch(`${baseUrl}/admin/musics/categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
@@ -179,7 +180,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     const fetchCategories = async () => {
       try {
         console.log('카테고리 데이터 가져오기 시작...')
-        const response = await fetch('/admin/musics/categories')
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const response = await fetch(`${baseUrl}/admin/musics/categories`)
         
         if (response.ok) {
           const data = await response.json()
@@ -368,7 +370,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         if (lyricsInputType === 'file' && lyricsFile) formData.append('lyrics', lyricsFile)
         if (thumbFile) formData.append('cover', thumbFile)
 
-        const uploadRes = await fetch('/admin/musics/upload', {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const uploadRes = await fetch(`${baseUrl}/admin/musics/upload`, {
           method: 'POST',
           body: formData
         })
@@ -386,7 +389,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         }
 
         // 2) 음원 등록
-        const response = await fetch('/admin/musics', {
+        const response = await fetch(`${baseUrl}/admin/musics`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -439,7 +442,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
           grade, lyricsText,
           // 가격류는 필요 시에만 보냄
         }
-        const res = await fetch(`/admin/musics/${musicData.id}`, {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const res = await fetch(`${baseUrl}/admin/musics/${musicData.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)

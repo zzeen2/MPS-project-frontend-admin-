@@ -81,7 +81,8 @@ export default function RewardsTokensPage() {
   // API 호출 함수들
   const fetchTokenInfo = async () => {
     try {
-      const response = await fetch('/api/admin/tokens/info')
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const response = await fetch(`${baseUrl}/api/admin/tokens/info`)
       if (response.ok) {
         const data = await response.json()
         setTokenInfo(data)
@@ -93,7 +94,8 @@ export default function RewardsTokensPage() {
 
   const fetchWalletInfo = async () => {
     try {
-      const response = await fetch('/api/admin/tokens/wallet')
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const response = await fetch(`${baseUrl}/api/admin/tokens/wallet`)
       if (response.ok) {
         const data = await response.json()
         setSponsorWallet(data)
@@ -108,7 +110,8 @@ export default function RewardsTokensPage() {
       if (refresh) setIsRefreshing(true)
       
       const offset = (page - 1) * itemsPerPage
-      const response = await fetch(`/api/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const response = await fetch(`${baseUrl}/api/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -183,7 +186,8 @@ export default function RewardsTokensPage() {
 
   const fetchTransactionDetail = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/tokens/transactions/${id}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const response = await fetch(`${baseUrl}/api/admin/tokens/transactions/${id}`)
       if (response.ok) {
         const data = await response.json()
         setTransactionDetail(data)

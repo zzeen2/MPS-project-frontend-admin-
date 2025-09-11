@@ -91,7 +91,8 @@ export default function RewardsMusicsPage() {
       params.set('limit', String(itemsPerPage))
       params.set('sortBy', sortBy)
       params.set('order', sortOrder)
-      const url = `/admin/musics/rewards/summary?${params.toString()}`
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const url = `${baseUrl}/admin/musics/rewards/summary?${params.toString()}`
       const res = await fetch(url)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()

@@ -56,7 +56,8 @@ export default function RewardEditModal({ open, onClose, music, onSuccess }: Rew
     console.log('API URL:', `/admin/musics/${music.id}/rewards`)
     
     try {
-      const response = await fetch(`/admin/musics/${music.id}/rewards`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const response = await fetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

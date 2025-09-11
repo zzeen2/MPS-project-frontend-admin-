@@ -80,7 +80,8 @@ export default function DashboardPage() {
       try {
         setHourlyLoading(true)
         setHourlyError(null)
-        const res = await fetch(`/admin/companies/stats/hourly-plays`)
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const res = await fetch(`${baseUrl}/admin/companies/stats/hourly-plays`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const j = await res.json()
         const data = (j.labels || []).map((label: string, i: number) => ({
@@ -103,9 +104,10 @@ export default function DashboardPage() {
     const fetchRealtimeData = async () => {
       try {
         console.log('Fetching realtime data...')
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
         const [apiRes, tracksRes] = await Promise.all([
-          fetch('/admin/musics/realtime/api-status'),
-          fetch('/admin/musics/realtime/top-tracks')
+          fetch(`${baseUrl}/admin/musics/realtime/api-status`),
+          fetch(`${baseUrl}/admin/musics/realtime/top-tracks`)
         ])
         
         console.log('API responses:', {

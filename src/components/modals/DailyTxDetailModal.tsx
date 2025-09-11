@@ -35,7 +35,8 @@ export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDeta
         
         setLoading(true)
         try {
-            const response = await fetch(`/api/admin/tokens/batches/${batch.date}`)
+            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+            const response = await fetch(`${baseUrl}/api/admin/tokens/batches/${batch.date}`)
             if (response.ok) {
                 const data = await response.json()
                 setCompanyDistributions(data.companyDistributions || [])
