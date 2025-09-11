@@ -19,10 +19,8 @@ function LoginForm() {
         setLoading(true);
         setErr(null);   
         try {
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-            console.log('API_BASE_URL:', API_BASE_URL);
-            console.log('Full URL:', `${API_BASE_URL}/admin/login`);
-            const res = await axios.post(`${API_BASE_URL}/admin/login`, {adminId, adminPw });
+            console.log('Full URL:', '/admin/login');
+            const res = await axios.post('/admin/login', {adminId, adminPw });
 
             if(res.status === 200) {
                 // 토큰 저장

@@ -47,7 +47,7 @@ export default function Sidebar() {
   const handleLogout = async() => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/logout`, {}, {
+      await axios.post('/admin/logout', {}, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }

@@ -24,7 +24,7 @@ export default function BarCategoryTop5() {
       try {
         setLoading(true)
         setError(null)
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/stats/category-top5`)
+        const res = await fetch(`/admin/musics/stats/category-top5`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const j = await res.json()
         setData(j.items || [])

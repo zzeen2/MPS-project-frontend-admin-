@@ -32,10 +32,10 @@ export default function MonthlyPlaysCard() {
       try {
         setLoading(true)
         setError(null)
-        const curRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/stats/plays/valid`)
+        const curRes = await fetch(`/admin/musics/stats/plays/valid`)
         if (!curRes.ok) throw new Error(`HTTP ${curRes.status}`)
         const cur = await curRes.json()
-        const prevRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/stats/plays/valid?yearMonth=${prevYM}`)
+        const prevRes = await fetch(`/admin/musics/stats/plays/valid?yearMonth=${prevYM}`)
         if (!prevRes.ok) throw new Error(`HTTP ${prevRes.status}`)
         const prv = await prevRes.json()
         if (aborted) return

@@ -47,8 +47,16 @@ export default function MusicsPage() {
   const fetchMusics = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics?page=${currentPage}&limit=10&search=${searchQuery}&category=${genreFilter}&musicType=${musicTypeFilter}`)
+      const url = `/api/admin/musics?page=${currentPage}&limit=10&search=${searchQuery}&category=${genreFilter}&musicType=${musicTypeFilter}`
+      console.log('🔍 Frontend API URL:', url)
+      console.log('🔍 Frontend params:', { currentPage, searchQuery, genreFilter, musicTypeFilter })
+      
+      const response = await fetch(url)
+      console.log('🔍 Frontend response status:', response.status)
+      
       const data = await response.json()
+      console.log('🔍 Frontend response data:', data)
+      
       setMusics(data.musics || [])
       setTotalCount(data.totalCount || (data.musics ? data.musics.length : 0))
     } catch (error) {
@@ -165,7 +173,7 @@ export default function MusicsPage() {
 
   const executeDelete = async (ids: number[]) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/delete`, {
+      const response = await fetch(`/admin/musics/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -191,7 +199,7 @@ export default function MusicsPage() {
   const handleEdit = async (id: number) => {
     try {
       setIsCreateMode(false)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${id}`)
+      const res = await fetch(`/admin/musics/${id}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
               const mapped = {
@@ -605,7 +613,7 @@ export default function MusicsPage() {
                     onClick={async () => {
                       setStatsTitle(item.title)
                       try {
-                                                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${item.id}`)
+                                                 const res = await fetch(`/admin/musics/${item.id}`)
                          const data = await res.json()
                          setStatsMusicData({
                            id: String(data.id),
@@ -702,7 +710,7 @@ export default function MusicsPage() {
                           e.stopPropagation()
                           setStatsTitle(item.title)
                           try {
-                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${item.id}`)
+                            const res = await fetch(`/admin/musics/${item.id}`)
                             if (!res.ok) throw new Error(`HTTP ${res.status}`)
                             const data = await res.json()
                             setStatsMusicData({

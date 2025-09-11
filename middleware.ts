@@ -42,8 +42,11 @@ async function verifyTokenEdge(token: string | undefined): Promise<{ ok: boolean
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  const isPublicLogin = pathname === '/admin' || pathname === '/admin/'
-  const isProtected = pathname.startsWith('/admin') && !isPublicLogin
+  const isAuthApi = pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/refresh-token'
+  const isProxyApi = pathname.startsWith('/admin/musics')
+  const isOptions = req.method === 'OPTIONS'
+  const isPublicLogin = pathname === '/admin' || pathname === '/admin/' || isAuthApi || isProxyApi
+  const isProtected = pathname.startsWith('/admin') && !isPublicLogin && !isOptions
 
   if (!isProtected) {
     return NextResponse.next()

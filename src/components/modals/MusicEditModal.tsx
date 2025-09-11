@@ -135,8 +135,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     }
     try {
       setAddingCategory(true)
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const res = await fetch(`${baseUrl}/admin/musics/categories`, {
+      const res = await fetch('/admin/musics/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
@@ -180,10 +179,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     const fetchCategories = async () => {
       try {
         console.log('카테고리 데이터 가져오기 시작...')
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-        const response = await fetch(`${baseUrl}/admin/musics/categories`)
-        console.log('API 응답 상태:', response.status)
-        console.log('호출한 URL:', `${baseUrl}/admin/musics/categories`)
+        const response = await fetch('/admin/musics/categories')
         
         if (response.ok) {
           const data = await response.json()
@@ -269,12 +265,12 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
 
   // 음원 등록 완료 후 재생 URL 생성
   const generatePlaybackUrls = (musicId: number) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4001'
+    // 상대 경로 사용
     
     return {
-      playMusic: `${baseUrl}/api/musics/${musicId}/play`,
-      downloadLyrics: `${baseUrl}/api/musics/${musicId}/lyrics`,
-      previewUrl: `${baseUrl}/api/musics/${musicId}/preview`
+      playMusic: `/api/musics/${musicId}/play`,
+      downloadLyrics: `/api/musics/${musicId}/lyrics`,
+      previewUrl: `/api/musics/${musicId}/preview`
     }
   }
 
@@ -364,7 +360,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     if (isCreateMode) {
       // 실시간 검증으로 이미 모든 필드가 검증되었으므로 바로 진행
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        // 상대 경로 사용
 
         // 1) 파일 업로드 (오디오/가사)
         const formData = new FormData()
@@ -372,7 +368,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         if (lyricsInputType === 'file' && lyricsFile) formData.append('lyrics', lyricsFile)
         if (thumbFile) formData.append('cover', thumbFile)
 
-        const uploadRes = await fetch(`${baseUrl}/admin/musics/upload`, {
+        const uploadRes = await fetch('/admin/musics/upload', {
           method: 'POST',
           body: formData
         })
@@ -390,7 +386,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         }
 
         // 2) 음원 등록
-        const response = await fetch(`${baseUrl}/admin/musics`, {
+        const response = await fetch('/admin/musics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -436,14 +432,14 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     } else {
       // 수정 모드: 허용 필드만 PATCH
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        // 상대 경로 사용
         if (!musicData?.id) throw new Error('수정 대상 ID가 없습니다.')
         const payload: any = {
           title, artist, category, tags, releaseDate,
           grade, lyricsText,
           // 가격류는 필요 시에만 보냄
         }
-        const res = await fetch(`${baseUrl}/admin/musics/${musicData.id}`, {
+        const res = await fetch(`/admin/musics/${musicData.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)

@@ -119,7 +119,7 @@ export default function MusicStatsModal({ open, onClose, title = '음원 상세'
                 <div className="w-64 h-64 rounded-lg border border-white/10 overflow-hidden bg-white/5">
                   {musicData?.id ? (
                     <img 
-                      src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${musicData.id}/cover`} 
+                      src={`/admin/musics/${musicData.id}/cover`} 
                       alt={`${musicData?.title || title} 커버`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -381,7 +381,7 @@ export default function MusicStatsModal({ open, onClose, title = '음원 상세'
                         <div className="flex items-center gap-2">
                           <span>가사 파일이 등록되어 있습니다.</span>
                           <a 
-                            href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${musicData.id}/lyrics?mode=download`}
+                            href={`/admin/musics/${musicData.id}/lyrics?mode=download`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-teal-400 hover:text-teal-300 underline text-xs"
@@ -436,7 +436,7 @@ export default function MusicStatsModal({ open, onClose, title = '음원 상세'
                               <span>가사 파일이 등록되어 있습니다.</span>
                               <div className="flex gap-2">
                                 <a 
-                                  href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${musicData.id}/lyrics?mode=inline`}
+                                  href={`/admin/musics/${musicData.id}/lyrics?mode=inline`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-400 hover:text-blue-300 underline text-sm"
@@ -444,7 +444,7 @@ export default function MusicStatsModal({ open, onClose, title = '음원 상세'
                                   새 창에서 보기
                                 </a>
                                 <a 
-                                  href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${musicData.id}/lyrics?mode=download`}
+                                  href={`/admin/musics/${musicData.id}/lyrics?mode=download`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-teal-400 hover:text-teal-300 underline text-sm"

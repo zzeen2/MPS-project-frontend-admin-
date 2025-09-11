@@ -58,7 +58,7 @@ export default function BulkRewardEditModal({ open, onClose, selectedMusics, onS
             grade: grade,
           }
 
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${music.id}/rewards`, {
+          const response = await fetch(`/admin/musics/${music.id}/rewards`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -99,7 +99,7 @@ export default function BulkRewardEditModal({ open, onClose, selectedMusics, onS
           rewardPerPlay: newRpp,
         }
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/musics/${music.id}/rewards`, {
+        const res = await fetch(`/admin/musics/${music.id}/rewards`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),

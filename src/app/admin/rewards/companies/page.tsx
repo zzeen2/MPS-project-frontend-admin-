@@ -156,7 +156,7 @@ export default function CompanyRewardsPage() {
         params.set('limit', String(itemsPerPage))
         params.set('sortBy', mapSortByToServer(sortBy))
         params.set('order', sortOrder)
-        const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/rewards/summary?${params.toString()}`
+        const url = `/admin/companies/rewards/summary?${params.toString()}`
         const res = await fetch(url, { signal: controller.signal })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data: ApiResponse = await res.json()
@@ -293,7 +293,7 @@ export default function CompanyRewardsPage() {
       const params = new URLSearchParams()
       const ym = yearMonth ?? detailYearMonth ?? getDefaultYearMonth()
       if (ym) params.set('yearMonth', ym)
-      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/${companyId}/rewards/detail?${params.toString()}`
+      const url = `/admin/companies/${companyId}/rewards/detail?${params.toString()}`
       const res = await fetch(url)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()

@@ -20,7 +20,6 @@ interface DailyTxDetailModalProps {
 }
 
 export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDetailModalProps) {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
     const [companyDistributions, setCompanyDistributions] = useState([])
     const [validPlayHistory, setValidPlayHistory] = useState([])
     const [loading, setLoading] = useState(false)
@@ -36,7 +35,7 @@ export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDeta
         
         setLoading(true)
         try {
-            const response = await fetch(`${baseUrl}/admin/tokens/batches/${batch.date}`)
+            const response = await fetch(`/api/admin/tokens/batches/${batch.date}`)
             if (response.ok) {
                 const data = await response.json()
                 setCompanyDistributions(data.companyDistributions || [])

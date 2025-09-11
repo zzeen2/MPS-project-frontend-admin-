@@ -18,7 +18,7 @@ export default function PieTierDistribution() {
       try {
         setLoading(true)
         setError(null)
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/stats/tier-distribution`)
+        const res = await fetch(`/admin/companies/stats/tier-distribution`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const j = await res.json()
         setData({ free: j.free || 0, standard: j.standard || 0, business: j.business || 0, total: j.total || 0 })

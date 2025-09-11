@@ -27,10 +27,10 @@ export default function CompanyTotalCard() {
       try {
         setLoading(true)
         setError(null)
-        const curRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/stats/total`)
+        const curRes = await fetch(`/admin/companies/stats/total`)
         if (!curRes.ok) throw new Error(`HTTP ${curRes.status}`)
         const cur = await curRes.json()
-        const prevRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/stats/total?yearMonth=${prevYM}`)
+        const prevRes = await fetch(`/admin/companies/stats/total?yearMonth=${prevYM}`)
         if (!prevRes.ok) throw new Error(`HTTP ${prevRes.status}`)
         const prv = await prevRes.json()
         if (aborted) return

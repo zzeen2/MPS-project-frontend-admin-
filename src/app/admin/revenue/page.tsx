@@ -97,7 +97,7 @@ export default function RevenueDashboardPage() {
   const fetchCalendarData = async (year: number, month: number) => {
     try {
       const yearMonth = `${year}-${String(month + 1).padStart(2, '0')}`
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/revenue/calendar?yearMonth=${yearMonth}`)
+      const res = await fetch(`/admin/companies/revenue/calendar?yearMonth=${yearMonth}`)
       if (res.ok) {
         const data = await res.json()
         setCalendarData(data)
@@ -114,9 +114,9 @@ export default function RevenueDashboardPage() {
         setError(null)
         
         const [trendsRes, standardRes, businessRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/revenue/trends`),
-          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/revenue/companies?grade=standard`),
-          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/companies/revenue/companies?grade=business`)
+          fetch(`/admin/companies/revenue/trends`),
+          fetch(`/admin/companies/revenue/companies?grade=standard`),
+          fetch(`/admin/companies/revenue/companies?grade=business`)
         ])
         
         if (trendsRes.ok) {
