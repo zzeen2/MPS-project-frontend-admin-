@@ -47,7 +47,7 @@ export default function MusicsPage() {
   const fetchMusics = async () => {
     setLoading(true)
     try {
-      const url = `/api/admin/musics?page=${currentPage}&limit=10&search=${searchQuery}&category=${genreFilter}&musicType=${musicTypeFilter}`
+      const url = `/admin/musics?page=${currentPage}&limit=10&search=${searchQuery}&category=${genreFilter}&musicType=${musicTypeFilter}`
       console.log('🔍 Frontend API URL:', url)
       console.log('🔍 Frontend params:', { currentPage, searchQuery, genreFilter, musicTypeFilter })
       
