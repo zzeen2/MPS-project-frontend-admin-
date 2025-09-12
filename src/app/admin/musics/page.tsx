@@ -533,19 +533,21 @@ export default function MusicsPage() {
                 console.log('API 응답 데이터:', musics)
                 
                 // 필터링 + 정렬된 데이터 생성
-                let filteredData = musics.map((item, index) => {
-                  return {
-                    index: index,
-                    id: item.id,                                    // 음원번호
-                    title: item.title,                              // 제목
-                    artist: item.artist,                            // 아티스트
-                    musicType: item.musictype ? 'Inst' : '일반',    // 음원 유형 (musictype 필드 사용)
-                    genre: item.category || '미분류',               // 카테고리 (category 필드 사용)
-                    tags: item.tags || '-',                  // 태그 (tags 필드 사용)
-                    releaseDate: item.releasedate ? new Date(item.releasedate).toLocaleDateString() : '미정', // 발매일 (releasedate 필드 사용)
-                    maxRewardLimit: item.maxrewardlimit && item.maxrewardlimit > 0 ? `${item.maxrewardlimit}토큰` : '-',   // 월 최대 리워드 한도 (maxrewardlimit 필드 사용)
-                  }
-                })
+                let filteredData = musics
+                  .filter(item => item && item.id && !isNaN(item.id) && item.id > 0) // 유효한 음원만 필터링
+                  .map((item, index) => {
+                    return {
+                      index: index,
+                      id: item.id,                                    // 음원번호
+                      title: item.title,                              // 제목
+                      artist: item.artist,                            // 아티스트
+                      musicType: item.musictype ? 'Inst' : '일반',    // 음원 유형 (musictype 필드 사용)
+                      genre: item.category || '미분류',               // 카테고리 (category 필드 사용)
+                      tags: item.tags || '-',                  // 태그 (tags 필드 사용)
+                      releaseDate: item.releasedate ? new Date(item.releasedate).toLocaleDateString() : '미정', // 발매일 (releasedate 필드 사용)
+                      maxRewardLimit: item.maxrewardlimit && item.maxrewardlimit > 0 ? `${item.maxrewardlimit}토큰` : '-',   // 월 최대 리워드 한도 (maxrewardlimit 필드 사용)
+                    }
+                  })
                 
                 // 필터링
                 filteredData = filteredData.filter(item => {
