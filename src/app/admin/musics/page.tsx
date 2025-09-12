@@ -200,6 +200,13 @@ export default function MusicsPage() {
 
   const handleEdit = async (id: number) => {
     try {
+      // ID 유효성 검사
+      if (!id || isNaN(id) || id <= 0) {
+        console.error('유효하지 않은 음원 ID:', id)
+        alert('유효하지 않은 음원 ID입니다.')
+        return
+      }
+      
       setIsCreateMode(false)
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
       const res = await fetch(`${baseUrl}/admin/musics/${id}`)
@@ -614,9 +621,16 @@ export default function MusicsPage() {
                       item.index % 2 === 0 ? 'bg-white/2' : 'bg-white/1'
                     } hover:bg-white/8`}
                     onClick={async () => {
+                      // ID 유효성 검사
+                      if (!item.id || isNaN(item.id) || item.id <= 0) {
+                        console.error('유효하지 않은 음원 ID:', item.id)
+                        alert('유효하지 않은 음원 ID입니다.')
+                        return
+                      }
+                      
                       setStatsTitle(item.title)
                       try {
-                                                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+                                                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'                                                                                    
                                                  const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
                          const data = await res.json()
                          setStatsMusicData({
@@ -712,9 +726,17 @@ export default function MusicsPage() {
                         className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-3 py-1.5 text-xs text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200" 
                         onClick={async (e) => {
                           e.stopPropagation()
+                          
+                          // ID 유효성 검사
+                          if (!item.id || isNaN(item.id) || item.id <= 0) {
+                            console.error('유효하지 않은 음원 ID:', item.id)
+                            alert('유효하지 않은 음원 ID입니다.')
+                            return
+                          }
+                          
                           setStatsTitle(item.title)
                           try {
-                            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+                            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'                                                                                                         
                             const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
                             if (!res.ok) throw new Error(`HTTP ${res.status}`)
                             const data = await res.json()
