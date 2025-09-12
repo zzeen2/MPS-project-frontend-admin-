@@ -615,7 +615,7 @@ export default function MusicsPage() {
                 }
                 
                 return filteredData
-              }, [genreFilter, musicTypeFilter, sortBy, sortOrder, idSortFilter, releaseDateSortFilter, rewardLimitFilter, musics]).map((item) => {
+              }, [genreFilter, musicTypeFilter, sortBy, sortOrder, idSortFilter, releaseDateSortFilter, rewardLimitFilter, musics]).filter(item => item && item.id && !isNaN(item.id) && item.id > 0).map((item) => {
                 return (
                   <tr 
                     key={item.index} 
