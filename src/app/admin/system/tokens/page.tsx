@@ -78,14 +78,30 @@ export default function RewardsTokensPage() {
   const [isProcessingToday, setIsProcessingToday] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
+  // 수동 배치 실행 상태
+  const [manualDate, setManualDate] = useState('')
+  const [manualProcessing, setManualProcessing] = useState(false)
+  const [manualMessage, setManualMessage] = useState<string | null>(null)
+
+  // 마지막 새로고침 시간
+  const [lastRefreshTime, setLastRefreshTime] = useState<string | null>(null)
+
   // API 호출 함수들
   const fetchTokenInfo = async () => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const response = await fetch(`${baseUrl}/api/admin/tokens/info`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const response = await fetch(`${baseUrl}/admin/tokens/info`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000
+      })
       if (response.ok) {
         const data = await response.json()
         setTokenInfo(data)
+      } else {
+        console.error('토큰 정보 조회 실패:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('토큰 정보 조회 실패:', error)
@@ -94,14 +110,27 @@ export default function RewardsTokensPage() {
 
   const fetchWalletInfo = async () => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const response = await fetch(`${baseUrl}/api/admin/tokens/wallet`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const response = await fetch(`${baseUrl}/admin/tokens/wallet`)
       if (response.ok) {
         const data = await response.json()
         setSponsorWallet(data)
+      } else {
+        // API 실패 시 Mock 데이터 사용
+        setSponsorWallet({
+          address: "0x1234567890123456789012345678901234567890",
+          ethBalance: 0.5,
+          lastUpdated: new Date().toISOString()
+        })
       }
     } catch (error) {
       console.error('지갑 정보 조회 실패:', error)
+      // 에러 발생 시 Mock 데이터 사용
+      setSponsorWallet({
+        address: "0x1234567890123456789012345678901234567890",
+        ethBalance: 0.5,
+        lastUpdated: new Date().toISOString()
+      })
     }
   }
 
@@ -110,8 +139,8 @@ export default function RewardsTokensPage() {
       if (refresh) setIsRefreshing(true)
       
       const offset = (page - 1) * itemsPerPage
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const response = await fetch(`${baseUrl}/api/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const response = await fetch(`${baseUrl}/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -143,6 +172,12 @@ export default function RewardsTokensPage() {
         fetchTransactions(1)
       ])
       setLoading(false)
+      // 초기 로드 시에도 시간 설정
+      setLastRefreshTime(new Date().toLocaleTimeString('ko-KR', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      }))
     }
     loadData()
   }, [])
@@ -151,6 +186,11 @@ export default function RewardsTokensPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchTransactions(currentPage, true)
+      setLastRefreshTime(new Date().toLocaleTimeString('ko-KR', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      }))
     }, 30000) // 30초마다 새로고침
 
     return () => clearInterval(interval)
@@ -176,18 +216,73 @@ export default function RewardsTokensPage() {
     }
   }
 
+  // 수동 집계 & 트랜잭션 실행 (backend test/manual-batch 사용)
+  const runManualBatch = async () => {
+    if (manualProcessing) return
+    setManualProcessing(true)
+    setManualMessage(null)
+    try {
+      // 미래 날짜 검증 (입력 날짜가 오늘보다 크면 중단)
+      if (manualDate) {
+        const today = new Date();
+        const input = new Date(manualDate + 'T00:00:00');
+        // 날짜 비교 시 로컬 자정 기준으로만 비교 (시간대 차이 최소화)
+        const ymd = (d: Date) => [d.getFullYear(), d.getMonth(), d.getDate()].join('-');
+        const todayKey = ymd(today);
+        const inputKey = ymd(input);
+        if (input > today && inputKey !== todayKey) {
+          setManualMessage('과거 시간을 입력해주세요.');
+          return;
+        }
+      }
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      // 날짜 입력(YYYY-MM-DD)을 ISO(+09:00)로 변환
+      const payload: any = {}
+      if (manualDate) {
+        payload.targetDate = `${manualDate}T00:00:00+09:00`
+      }
+      const res = await fetch(`${baseUrl}/test/manual-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      if (data && data.success === true && (data.total === 0 || data.count === 0)) {
+        setManualMessage('해당 일자에 처리할 데이터가 없습니다.')
+      } else {
+        setManualMessage(`성공\n${JSON.stringify(data).slice(0, 800)}${JSON.stringify(data).length > 800 ? '...' : ' '}`)
+      }
+      // 필요시 실행 후 트랜잭션 목록 새로고침
+      fetchTransactions(1, true)
+    } catch (e: any) {
+      console.error('수동 실행 실패', e)
+      setManualMessage(`실패: ${e.message || e}`)
+    } finally {
+      setManualProcessing(false)
+    }
+  }
+
   const handleRefreshWallet = async () => {
     await fetchWalletInfo()
   }
 
   const handleRefreshTransactions = async () => {
     await fetchTransactions(currentPage, true)
+    setLastRefreshTime(new Date().toLocaleTimeString('ko-KR', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    }))
   }
 
   const fetchTransactionDetail = async (id: string) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const response = await fetch(`${baseUrl}/api/admin/tokens/transactions/${id}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const response = await fetch(`${baseUrl}/admin/tokens/transactions/${id}`)
       if (response.ok) {
         const data = await response.json()
         setTransactionDetail(data)
@@ -349,19 +444,43 @@ export default function RewardsTokensPage() {
         </Card>
 
         <Card>
-          <Title variant="card">금일 데이터 처리</Title>
-          <div className="mt-4 space-y-4 text-sm">
-            <p className="text-white/70 leading-relaxed">
-              금일 00:00 ~ 현재까지 수집된 유효재생/리워드 적립 내역을 즉시 집계하여 온체인에 기록하고 리워드 토큰을 발행/배포합니다.
-            </p>
-            <button
-              onClick={handleProcessToday}
-              disabled={isProcessingToday}
-              className="w-full rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-4 py-2 text-sm text-white font-medium hover:from-teal-600 hover:to-teal-700 disabled:opacity-50 transition"
-            >
-              {isProcessingToday ? '처리중...' : '금일 트랜잭션 내역 즉시 처리'}
-            </button>
-            <div className="text-xs text-white/40">* 기본 스케줄은 자정 기준 자동 처리됩니다.</div>
+          <Title variant="card">수동 트랜잭션 실행</Title>
+          <div className="mt-4 space-y-5 text-sm">
+
+            {/* 날짜 선택 */}
+            <div className="space-y-2">
+              <label className="flex flex-col gap-2">
+                <input
+                  type="date"
+                  value={manualDate}
+                  placeholder='날짜 선택 (미지정 시 금일 데이터 처리)'
+                  onChange={(e) => setManualDate(e.target.value)}
+                  className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                />
+              </label>
+              <div className="text-[11px] text-white/40 leading-relaxed">
+                • 일자 미지정 시 금일 현재까지 누적된 데이터를 기록합니다.<br />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={runManualBatch}
+                disabled={manualProcessing}
+                className="w-full rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-4 py-2 text-sm text-white font-medium hover:from-teal-600 hover:to-teal-700 disabled:opacity-50 transition"
+              >
+                {manualProcessing
+                  ? '실행 중...'
+                  : manualDate
+                    ? `${manualDate} 트랜잭션 재실행`
+                    : '금일 사용내역 기록'}
+              </button>
+              {manualMessage && (
+                <div className="text-xs text-white/60 whitespace-pre-line">
+                  {manualMessage}
+                </div>
+              )}
+            </div>
           </div>
         </Card>
       </div>
@@ -370,7 +489,12 @@ export default function RewardsTokensPage() {
       <Card>
         <div className="flex items-center justify-between mb-4">
           <Title variant="card">트랜잭션 모니터링</Title>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {lastRefreshTime && (
+              <div className="text-xs text-white/50">
+                마지막 업데이트: {lastRefreshTime}
+              </div>
+            )}
             <button 
               onClick={handleRefreshTransactions}
               disabled={isRefreshing}

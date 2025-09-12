@@ -57,6 +57,8 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
   const [monthlyError, setMonthlyError] = useState<string | null>(null)
   const [monthlyItems, setMonthlyItems] = useState<Array<{
     label: string
+    musicCalls: number
+    lyricsCalls: number
     validPlays: number
     companiesUsing: number
     monthlyLimit: number | null
@@ -314,7 +316,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                   <div className="rounded-xl border border-white/10 p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-white flex items-center gap-3">
-                        <div className="w-1 h-6 bg-teal-400 rounded-full"></div>
+                        <span className="h-4 w-1.5 rounded bg-teal-300"></span>
                         음악 호출 추이
                       </h3>
                       <div className="flex items-center gap-2">
@@ -364,9 +366,9 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                 <div className="rounded-xl border border-white/10 p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-white flex items-center gap-3">
-                    <div className="w-1 h-6 bg-teal-400 rounded-full"></div>
+                        <span className="h-4 w-1.5 rounded bg-blue-300"></span>
                         가사 호출 추이
-                  </h3>
+                      </h3>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setLyricsGranularity('daily')}
@@ -416,7 +418,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                 {/* 월별 사용 상세 현황 */}
                 <div className="rounded-xl border border-white/10 p-6">
                   <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-                    <div className="w-1 h-6 bg-teal-400 rounded-full"></div>
+                    <span className="h-4 w-1.5 rounded bg-teal-300"></span>
                     월별 리워드 발생 현황
                   </h3>
                   <div className="overflow-x-auto">
@@ -429,7 +431,8 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                         <thead className="text-center">
                           <tr className="border-b border-white/10">
                             <th className="px-6 py-4 text-white/80 font-medium text-center">월</th>
-                            <th className="px-6 py-4 text-white/80 font-medium text-center">유효재생수</th>
+                            <th className="px-6 py-4 text-white/80 font-medium text-center">음원호출</th>
+                            <th className="px-6 py-4 text-white/80 font-medium text-center">가사호출</th>
                             <th className="px-6 py-4 text-white/80 font-medium text-center">사용 기업</th>
                             <th className="px-6 py-4 text-white/80 font-medium text-center">월 한도</th>
                             <th className="px-6 py-4 text-white/80 font-medium text-center">사용률</th>
@@ -444,7 +447,8 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                             return (
                               <tr key={it.label} className="border-b border-white/5">
                                 <td className="px-6 py-4 font-medium text-white text-center">{it.label}</td>
-                                <td className="px-6 py-4 text-teal-400 font-medium text-center">{it.validPlays.toLocaleString()}</td>
+                                <td className="px-6 py-4 text-teal-400 font-medium text-center">{it.musicCalls?.toLocaleString() || '0'}</td>
+                                <td className="px-6 py-4 text-blue-400 font-medium text-center">{it.lyricsCalls?.toLocaleString() || '0'}</td>
                                 <td className="px-6 py-4 text-white/80 text-center">{it.companiesUsing.toLocaleString()}개</td>
                                 <td className="px-6 py-4 text-white/80 text-center">{monthlyLimit !== null ? monthlyLimit.toLocaleString() : '-'}</td>
                                 <td className="px-6 py-4 text-white/80 text-center">
@@ -485,7 +489,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                 <div className="rounded-xl border border-white/10 p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-3">
-                      <div className="w-1 h-6 bg-teal-400 rounded-full"></div>
+                      <span className="h-4 w-1.5 rounded bg-teal-300"></span>
                       월별 사용 기업 현황
                     </h3>
                     <div className="flex items-center gap-2">

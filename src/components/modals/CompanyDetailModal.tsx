@@ -460,8 +460,9 @@ export default function CompanyDetailModal({ open, onClose, company, detail, loa
                               }`}>{index + 1}</span>
                             </td>
                             <td className="px-4 py-3 text-center">
-                              <div className="font-medium text-white truncate max-w-[200px]" title={row.title}>{row.title}</div>
-                              <div className="text-white/60 text-xs truncate max-w-[200px]" title={row.artist}>· {row.artist}</div>
+                              <div className="font-medium text-white truncate max-w-[200px]" title={`${row.title} · ${row.artist}`}>
+                                {row.title} <span className="text-white/60">· {row.artist}</span>
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-center">
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/10 text-white/80">

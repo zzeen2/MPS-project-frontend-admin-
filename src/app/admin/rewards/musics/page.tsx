@@ -47,6 +47,15 @@ const getCategoryColor = (category: string) => {
   return colors[index]
 }
 
+// 음원유형별 색상 함수
+const getMusicTypeColor = (musicType: string) => {
+  switch (musicType) {
+    case 'inst': return 'bg-blue-500/20 text-blue-300'
+    case 'normal': return 'bg-purple-500/20 text-purple-300'
+    default: return 'bg-white/10 text-white/80'
+  }
+}
+
 export default function RewardsMusicsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [yearMonth, setYearMonth] = useState<string>('')
@@ -195,12 +204,6 @@ export default function RewardsMusicsPage() {
       {/* 검색/필터 및 음원 현황 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <input
-            type="month"
-            value={yearMonth}
-            onChange={(e) => { setYearMonth(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-white/10 rounded-lg bg-transparent text-white placeholder-white/50 focus:outline-none focus:border-teal-400/50 transition-colors text-sm"
-          />
           <div className="min-w-[300px]">
             <input
               type="text"
@@ -485,10 +488,13 @@ export default function RewardsMusicsPage() {
                     <td className="px-8 py-5 text-white/80 text-center">{music.musicId}</td>
                     <td className="px-8 py-5 text-center">
                       <div className="font-semibold text-white">{music.title}</div>
-                      <div className="text-xs text-white/60">{music.artist}</div>
                     </td>
-                    <td className="px-8 py-5 text-white/80 text-center">{(music as any).musicType || '-'}</td>
-                    <td className="px-8 py-5 text-white/80 text-center">{music.monthlyLimit ? music.monthlyLimit.toLocaleString() : '-'}</td>
+                    <td className="px-8 py-5 text-center">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${getMusicTypeColor((music as any).musicType === 'Inst' ? 'inst' : 'normal')}`}>
+                        {(music as any).musicType || '-'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 text-teal-400 font-medium text-center">{music.monthlyLimit ? music.monthlyLimit.toLocaleString() : '-'}</td>
                     <td className="px-8 py-5 text-white/80 text-center">{music.rewardPerPlay != null ? Number(music.rewardPerPlay).toLocaleString() : '-'}</td>
                     <td className="px-8 py-5 text-center">
                       {usageRate !== null ? (

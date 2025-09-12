@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { io, Socket } from 'socket.io-client'
 import DashboardHeader from '@/components/layout/DashboardHeader'
 import CompanyTotalCard from '@/components/cards/CompanyTotalCard'
 import TrackTotalCard from '@/components/cards/TrackTotalCard'
@@ -32,36 +33,87 @@ export default function DashboardPage() {
     Array.from({ length: 10 }, (_, i) => ({ rank: i + 1, validPlays: 0, totalPlays: 0 }))
   )
   const [realtimeApiStatus, setRealtimeApiStatus] = useState<Array<{ 
+    id: number;
     status: string; 
     endpoint: string; 
     callType: string;
     validity: string;
     company: string; 
     timestamp: string 
-  }>>([
-    { status: 'success', endpoint: '/api/music/play', callType: '음원 호출', validity: '유효재생', company: 'Digital Media Inc', timestamp: '17:44:40' },
-    { status: 'success', endpoint: '/api/lyrics/get', callType: '가사 호출', validity: '유효재생', company: 'TechCorp Solutions', timestamp: '17:36:07' },
-    { status: 'error', endpoint: '/api/music/play', callType: '음원 호출', validity: '무효재생', company: 'Startup Ventures', timestamp: '17:28:42' },
-    { status: 'success', endpoint: '/api/lyrics/get', callType: '가사 호출', validity: '유효재생', company: 'Creative Agency', timestamp: '17:10:28' },
-    { status: 'success', endpoint: '/api/music/play', callType: '음원 호출', validity: '유효재생', company: 'Media Corp', timestamp: '17:08:44' }
-  ])
+  }>>([])
   const [apiStatusFilter, setApiStatusFilter] = useState<'all' | 'music' | 'lyrics'>('all')
   const [realtimeTopTracks, setRealtimeTopTracks] = useState<Array<{ 
+    id: number;
     rank: number; 
     title: string; 
     validPlays: number; 
-  }>>([
-    { rank: 1, title: 'Love Story', validPlays: 1250 },
-    { rank: 2, title: 'Summer Nights', validPlays: 980 },
-    { rank: 3, title: 'City Lights', validPlays: 850 },
-    { rank: 4, title: 'Ocean Waves', validPlays: 720 },
-    { rank: 5, title: 'Mountain Peak', validPlays: 650 },
-    { rank: 6, title: 'Forest Path', validPlays: 580 },
-    { rank: 7, title: 'River Flow', validPlays: 520 },
-    { rank: 8, title: 'Sky High', validPlays: 480 },
-    { rank: 9, title: 'Deep Blue', validPlays: 420 },
-    { rank: 10, title: 'Golden Hour', validPlays: 380 }
-  ])
+  }>>([])
+  const [socket, setSocket] = useState<Socket | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+
+  // WebSocket 연결
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+    const newSocket = io(baseUrl, {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
+    })
+
+    newSocket.on('connect', () => {
+      console.log('WebSocket 연결됨')
+      setIsConnected(true)
+      // 연결 시 실시간 데이터 구독
+      newSocket.emit('subscribe-realtime')
+    })
+
+    newSocket.on('disconnect', () => {
+      console.log('WebSocket 연결 해제됨')
+      setIsConnected(false)
+    })
+
+    newSocket.on('realtime-update', (data) => {
+      console.log('실시간 데이터 업데이트:', data)
+      setRealtimeApiStatus(data.apiCalls || [])
+      setRealtimeTopTracks(data.topTracks || [])
+      
+      // 마지막 업데이트 시간 업데이트
+      const now = new Date()
+      const s = now.toLocaleString('ko-KR', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+      setLastUpdated(s)
+    })
+
+    newSocket.on('realtime-error', (error) => {
+      console.error('실시간 데이터 오류:', error)
+    })
+
+    newSocket.on('connect_error', (error) => {
+      console.error('WebSocket 연결 에러:', error)
+      setIsConnected(false)
+    })
+
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log('WebSocket 재연결됨:', attemptNumber)
+      setIsConnected(true)
+    })
+
+    newSocket.on('reconnect_error', (error) => {
+      console.error('WebSocket 재연결 실패:', error)
+      setIsConnected(false)
+    })
+
+    setSocket(newSocket)
+
+    return () => {
+      newSocket.close()
+    }
+  }, [])
 
   useEffect(() => {
     // 마지막 업데이트 시간
@@ -80,7 +132,13 @@ export default function DashboardPage() {
       try {
         setHourlyLoading(true)
         setHourlyError(null)
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        console.log('🔍 Environment check:', {
+          NODE_ENV: process.env.NODE_ENV,
+          NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+          baseUrl: baseUrl,
+          fullUrl: `${baseUrl}/admin/companies/stats/hourly-plays`
+        })
         const res = await fetch(`${baseUrl}/admin/companies/stats/hourly-plays`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const j = await res.json()
@@ -104,7 +162,10 @@ export default function DashboardPage() {
     const fetchRealtimeData = async () => {
       try {
         console.log('Fetching realtime data...')
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        
+        // 실시간 데이터 API 호출 활성화
+        
         const [apiRes, tracksRes] = await Promise.all([
           fetch(`${baseUrl}/admin/musics/realtime/api-status`),
           fetch(`${baseUrl}/admin/musics/realtime/top-tracks`)
@@ -143,14 +204,12 @@ export default function DashboardPage() {
     }
 
     fetchHourly()
-    fetchRealtimeData()
     updateTime()
 
     const interval = setInterval(() => {
       fetchHourly()
-      fetchRealtimeData()
       updateTime()
-    }, 1000)
+    }, 30000) // 30초마다 시간 업데이트
 
     return () => clearInterval(interval)
   }, [])
@@ -202,7 +261,15 @@ export default function DashboardPage() {
       </section>
 
       <section className="mb-8">
-        <Title variant="section" className="mb-4">실시간 모니터링</Title>
+        <div className="flex items-center justify-between mb-4">
+          <Title variant="section">실시간 모니터링</Title>
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+            <span className="text-sm text-white/60">
+              {isConnected ? '실시간 연결됨' : '연결 끊김'}
+            </span>
+          </div>
+        </div>
         <div className="grid gap-5 [grid-template-columns:2fr_1fr] max-[1200px]:grid-cols-1">
           {/* 실시간 API 호출 */}
           <Card>

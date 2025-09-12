@@ -407,7 +407,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
             priceMusicOnly,
             priceLyricsOnly,
             rewardPerPlay,
-            maxPlayCount,
+            maxPlayCount: maxPlayCount === '' ? null : maxPlayCount,
             hasRewards,
             grade,
             lyricsText: lyricsInputType === 'text' ? lyricsText : undefined,

@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Card from '@/components/ui/Card'
 import Title from '@/components/ui/Title'
 import SimpleLineChart from '@/components/charts/SimpleLineChart'
+import { Chart, DoughnutController, ArcElement, Legend, Tooltip } from 'chart.js'
+
+Chart.register(DoughnutController, ArcElement, Legend, Tooltip)
 
 export default function ApiManagementPage() {
   const [pieTimeFilter, setPieTimeFilter] = useState<'24h' | '7d' | '30d'>('24h')
@@ -11,6 +14,10 @@ export default function ApiManagementPage() {
   const [sortBy, setSortBy] = useState<'usage' | 'recent' | 'created'>('usage')
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
   const [searchTerm, setSearchTerm] = useState('')
+  
+  // Chart.js refs
+  const pieCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const pieChartRef = useRef<Chart | null>(null)
   
   // API 데이터 상태
   const [apiStats, setApiStats] = useState({
@@ -96,6 +103,46 @@ export default function ApiManagementPage() {
     }
   }
 
+  // 파이차트 업데이트
+  useEffect(() => {
+    if (!pieCanvasRef.current || !apiStats) return
+    const ctx = pieCanvasRef.current.getContext('2d')!
+
+    const labels = ['음원 호출', '가사 호출']
+    const counts = [apiStats.musicCalls, apiStats.lyricsCalls]
+
+    pieChartRef.current = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [
+          { 
+            data: counts, 
+            backgroundColor: ['#14b8a6', '#3b82f6'], 
+            borderColor: 'rgba(0,0,0,0.8)', 
+            borderWidth: 2 
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { 
+          legend: { 
+            position: 'bottom', 
+            labels: { 
+              usePointStyle: true, 
+              padding: 12, 
+              color: '#9ca3af' 
+            } 
+          } 
+        },
+      },
+    })
+
+    return () => pieChartRef.current?.destroy()
+  }, [apiStats])
+
   // useEffect로 데이터 로드
   useEffect(() => {
     fetchApiStats(pieTimeFilter)
@@ -129,58 +176,8 @@ export default function ApiManagementPage() {
                 ))}
               </div>
             </div>
-            <div className="h-64 flex items-center justify-center">
-              <div className="w-48 h-48 relative">
-                {/* 파이차트 SVG */}
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  {/* 음원 호출 */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="#14b8a6"
-                    strokeWidth="8"
-                    strokeDasharray={`${2 * Math.PI * 40 * (apiStats.totalCalls > 0 ? apiStats.musicCalls / apiStats.totalCalls : 0)} ${2 * Math.PI * 40}`}
-                    strokeDashoffset="0"
-                  />
-                  {/* 가사 호출 */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="8"
-                    strokeDasharray={`${2 * Math.PI * 40 * (apiStats.totalCalls > 0 ? apiStats.lyricsCalls / apiStats.totalCalls : 0)} ${2 * Math.PI * 40}`}
-                    strokeDashoffset={`-${2 * Math.PI * 40 * (apiStats.totalCalls > 0 ? apiStats.musicCalls / apiStats.totalCalls : 0)}`}
-                  />
-                </svg>
-                {/* 중앙 텍스트 */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-white">{apiStats.totalCalls.toLocaleString()}</div>
-                    <div className="text-sm text-white/60">총 호출</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* 범례 */}
-            <div className="flex justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
-                <span className="text-sm text-gray-400">음원 호출</span>
-                <span className="text-sm text-teal-400 font-medium">
-                  {apiStats.musicCalls.toLocaleString()}회 ({Math.round((apiStats.musicCalls / apiStats.totalCalls) * 100)}%)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-400">가사 호출</span>
-                <span className="text-sm text-blue-400 font-medium">
-                  {apiStats.lyricsCalls.toLocaleString()}회 ({Math.round((apiStats.lyricsCalls / apiStats.totalCalls) * 100)}%)
-                </span>
-              </div>
+            <div className="h-80">
+              <canvas ref={pieCanvasRef} className="h-full w-full" />
             </div>
           </Card>
 
@@ -264,16 +261,16 @@ export default function ApiManagementPage() {
         <div className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-center">
+              <thead>
                 <tr className="border-b border-white/10">
-                  <th className="px-6 py-4 text-white/70 font-medium">기업 ID</th>
-                  <th className="px-6 py-4 text-white/70 font-medium">기업명</th>
-                  <th className="px-6 py-4 text-white/70 font-medium">API 키</th>
-                  <th className="px-6 py-4 text-white/70 font-medium">생성일</th>
-                  <th className="px-6 py-4 text-white/70 font-medium">마지막 사용</th>
-                  <th className="px-6 py-4 text-white/70 font-medium">총 호출</th>
-                  <th className="px-6 py-4 text-white/70 font-medium">음원 호출</th>
-                  <th className="px-6 py-4 text-white/70 font-medium">가사 호출</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">기업 ID</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">기업명</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">API 키</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">생성일</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">마지막 사용</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">총 호출</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">음원 호출</th>
+                  <th className="px-6 py-4 text-white/70 font-medium text-center">가사 호출</th>
                 </tr>
               </thead>
               <tbody>
@@ -296,11 +293,17 @@ export default function ApiManagementPage() {
                     } hover:bg-white/8`}>
                       <td className="px-6 py-4 text-white/80 text-center">{key.companyId}</td>
                       <td className="px-6 py-4 text-center">
-                        <div className="font-semibold text-white">{key.company}</div>
+                        <div className="font-semibold text-white text-center">{key.company}</div>
                       </td>
-                      <td className="px-6 py-4 text-white/80 font-mono text-center">{key.key}</td>
+                      <td className="px-6 py-4 text-white/80 font-mono text-center">
+                        <div className="max-w-[200px] truncate mx-auto" title={key.key}>
+                          {key.key}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-white/80 text-center">{key.created}</td>
-                      <td className="px-6 py-4 text-white/80 text-center">{key.lastUsed}</td>
+                      <td className="px-6 py-4 text-white/80 text-center">
+                        {key.lastUsed || '-'}
+                      </td>
                       <td className="px-6 py-4 text-white/80 text-center">{key.totalCalls.toLocaleString()}</td>
                       <td className="px-6 py-4 text-teal-400 text-center">{key.musicCalls.toLocaleString()}</td>
                       <td className="px-6 py-4 text-blue-400 text-center">{key.lyricsCalls.toLocaleString()}</td>
