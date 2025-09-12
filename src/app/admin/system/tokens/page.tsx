@@ -90,13 +90,18 @@ export default function RewardsTokensPage() {
   const fetchTokenInfo = async () => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      
       const response = await fetch(`${baseUrl}/admin/tokens/info`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 10000
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
       if (response.ok) {
         const data = await response.json()
         setTokenInfo(data)
