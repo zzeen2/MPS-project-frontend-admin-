@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 
 const MusicStatsModal = dynamic(() => import('@/components/modals/MusicStatsModal'), { ssr: false })
-const MusicEditModal = dynamic(() => import('@/components/modals/MusicEditModal'), { ssr: false })
+import MusicEditModal from '@/components/modals/MusicEditModal'
 
 export default function MusicsPage() {
   const [statsOpen, setStatsOpen] = useState(false)
@@ -51,8 +52,8 @@ export default function MusicsPage() {
       console.log('🔍 Frontend API URL:', url)
       console.log('🔍 Frontend params:', { currentPage, searchQuery, genreFilter, musicTypeFilter })
       
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const response = await fetch(`${baseUrl}${url}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const response = await apiFetch(`${baseUrl}${url}`)
       console.log('🔍 Frontend response status:', response.status)
       
       const data = await response.json()
@@ -174,12 +175,12 @@ export default function MusicsPage() {
 
   const executeDelete = async (ids: number[]) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const response = await fetch(`${baseUrl}/admin/musics/delete`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const response = await apiFetch(`${baseUrl}/admin/musics/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          // Authorization은 apiFetch가 자동 부착
         },
         body: JSON.stringify({ ids })
       })
@@ -208,8 +209,8 @@ export default function MusicsPage() {
       }
       
       setIsCreateMode(false)
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const res = await fetch(`${baseUrl}/admin/musics/${id}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const res = await apiFetch(`${baseUrl}/admin/musics/${id}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
               const mapped = {
@@ -225,7 +226,14 @@ export default function MusicsPage() {
         priceLyricsOnly: undefined,
         priceBoth: undefined,
         rewardPerPlay: (typeof data.rewardPerPlay === 'number' ? data.rewardPerPlay : undefined),
-        maxPlayCount: (typeof data.maxPlayCount === 'number' ? data.maxPlayCount : undefined),
+        totalRewardCount: (typeof data.totalRewardCount === 'number'
+          ? data.totalRewardCount
+          : (typeof (data as any).maxPlayCount === 'number' ? (data as any).maxPlayCount : undefined)),
+
+        maxPlayCount: (typeof data.totalRewardCount === 'number'
+          ? data.totalRewardCount
+          : (typeof (data as any).maxPlayCount === 'number' ? (data as any).maxPlayCount : undefined)),
+        grade: typeof data.grade === 'number' ? (data.grade as 0 | 1 | 2) : (Number((data as any).grade) as 0 | 1 | 2),
         accessTier: (data.grade === 0 ? 'all' : 'subscribed') as 'all' | 'subscribed',
         lyricsText: data.lyricsText || '',
         lyricsFilePath: data.lyricsFilePath || '',
@@ -623,16 +631,9 @@ export default function MusicsPage() {
                       item.index % 2 === 0 ? 'bg-white/2' : 'bg-white/1'
                     } hover:bg-white/8`}
                     onClick={async () => {
-                      // ID 유효성 검사
-                      if (!item.id || isNaN(item.id) || item.id <= 0) {
-                        console.error('유효하지 않은 음원 ID:', item.id)
-                        alert('유효하지 않은 음원 ID입니다.')
-                        return
-                      }
-                      
                       setStatsTitle(item.title)
                       try {
-                                                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'                                                                                    
+                                                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
                                                  const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
                          const data = await res.json()
                          setStatsMusicData({
@@ -728,18 +729,10 @@ export default function MusicsPage() {
                         className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-3 py-1.5 text-xs text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200" 
                         onClick={async (e) => {
                           e.stopPropagation()
-                          
-                          // ID 유효성 검사
-                          if (!item.id || isNaN(item.id) || item.id <= 0) {
-                            console.error('유효하지 않은 음원 ID:', item.id)
-                            alert('유효하지 않은 음원 ID입니다.')
-                            return
-                          }
-                          
                           setStatsTitle(item.title)
                           try {
-                            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'                                                                                                         
-                            const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
+                            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+                            const res = await apiFetch(`${baseUrl}/admin/musics/${item.id}`)
                             if (!res.ok) throw new Error(`HTTP ${res.status}`)
                             const data = await res.json()
                             setStatsMusicData({
@@ -815,15 +808,18 @@ export default function MusicsPage() {
       <MusicStatsModal open={statsOpen} onClose={()=>setStatsOpen(false)} title={statsTitle} musicData={statsMusicData} />
 
       {/* 수정/등록 모달 */}
-      <MusicEditModal 
-        open={editModalOpen} 
-        onClose={() => {
-          setEditModalOpen(false)
-          setIsCreateMode(false)
-        }} 
-        musicData={editMusicData}
-        isCreateMode={isCreateMode}
-      />
+      {editModalOpen && (
+        <MusicEditModal 
+          open={true}
+          onClose={() => {
+            setEditModalOpen(false)
+            setIsCreateMode(false)
+          }} 
+          musicData={editMusicData}
+          isCreateMode={isCreateMode}
+          key={isCreateMode ? 'create' : String(editMusicData?.id ?? 'edit')}
+        />
+      )}
 
       {/* 삭제 확인 모달 */}
       {deleteModalOpen && (

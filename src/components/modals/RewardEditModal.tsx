@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import { apiFetch } from '@/lib/api'
 
 type Music = {
   id: string
@@ -56,8 +57,8 @@ export default function RewardEditModal({ open, onClose, music, onSuccess }: Rew
     console.log('API URL:', `/admin/musics/${music.id}/rewards`)
     
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const response = await fetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const response = await apiFetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -238,6 +239,11 @@ export default function RewardEditModal({ open, onClose, music, onSuccess }: Rew
 
           {/* 버튼 */}
           <div className="flex gap-3 pt-4">
+            {/**
+             * 제출 활성화 규칙
+             * - removeReward=true: 언제나 활성(grade는 기본 0/2 중 하나 선택됨)
+             * - removeReward=false: 숫자 값 중 하나라도 변경되었을 때만 활성
+             */}
             <button
               type="button"
               onClick={onClose}
@@ -247,7 +253,14 @@ export default function RewardEditModal({ open, onClose, music, onSuccess }: Rew
             </button>
             <button
               type="submit"
-              disabled={isLoading || (rewardPerPlay === music.rewardPerPlay && totalRewardCount === music.totalRewardCount)}
+              disabled={(() => {
+                if (isLoading) return true
+                if (removeReward) return false
+                const initialCount = music.totalRewardCount ?? null
+                const currentCount = totalRewardCount === '' ? null : totalRewardCount
+                const numbersChanged = (rewardPerPlay !== music.rewardPerPlay) || (currentCount !== initialCount)
+                return !numbersChanged
+              })()}
               className="flex-1 px-4 py-3 text-sm font-medium text-white bg-teal-500/90 rounded-lg hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? (

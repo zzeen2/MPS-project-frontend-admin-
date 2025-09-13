@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import Card from '@/components/ui/Card'
 import Title from '@/components/ui/Title'
+import { apiFetch } from '@/lib/api'
 
 type Props = { 
   open: boolean; 
@@ -32,47 +33,103 @@ type Props = {
 }
 
 export default function MusicEditModal({ open, onClose, isCreateMode = false, musicData }: Props) {
-  if (!open) return null
+  if (!open) {
+    return null
+  }
 
 
 
   // 기본 정보
-  const [title, setTitle] = useState(isCreateMode ? '' : (musicData?.title || ''))
-  const [artist, setArtist] = useState(isCreateMode ? '' : (musicData?.artist || ''))
-  const [category, setCategory] = useState(isCreateMode ? '' : (musicData?.category || ''))
-  const [tags, setTags] = useState(isCreateMode ? '' : (musicData?.tags || ''))
-  const [releaseDate, setReleaseDate] = useState(isCreateMode ? '' : (musicData?.releaseDate || ''))
-  const [durationSec, setDurationSec] = useState<number | ''>(isCreateMode ? '' : (musicData?.durationSec || ''))
-  const [musicType, setMusicType] = useState<'일반' | 'Inst' | '가사만'>(isCreateMode ? '일반' : '일반')
+  const [title, setTitle] = useState('')
+  const [artist, setArtist] = useState('')
+  const [category, setCategory] = useState('')
+  const [tags, setTags] = useState('')
+  const [releaseDate, setReleaseDate] = useState('')
+  const [durationSec, setDurationSec] = useState<number | ''>('')
+  const [musicType, setMusicType] = useState<'일반' | 'Inst' | '가사만'>('일반')
   
   // 메타데이터 정보
-  const [lyricist, setLyricist] = useState(isCreateMode ? '' : (musicData?.lyricist || ''))
-  const [composer, setComposer] = useState(isCreateMode ? '' : (musicData?.composer || ''))
-  const [arranger, setArranger] = useState(isCreateMode ? '' : (musicData?.arranger || ''))
-  const [isrc, setIsrc] = useState(isCreateMode ? '' : (musicData?.isrc || ''))
+  const [lyricist, setLyricist] = useState('')
+  const [composer, setComposer] = useState('')
+  const [arranger, setArranger] = useState('')
+  const [isrc, setIsrc] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [thumbFile, setThumbFile] = useState<File | null>(null)
   const [lyricsFile, setLyricsFile] = useState<File | null>(null)
-  const [lyricsText, setLyricsText] = useState(isCreateMode ? '' : '')
-  const [lyricsInputType, setLyricsInputType] = useState<'file' | 'text'>(isCreateMode ? 'text' : 'text')
+  const [lyricsText, setLyricsText] = useState('')
+  const [lyricsInputType, setLyricsInputType] = useState<'file' | 'text'>('text')
 
   // 가격/리워드
-  const [priceRef, setPriceRef] = useState(isCreateMode ? 7 : (musicData?.priceRef || 7))
-  const [priceMusicOnly, setPriceMusicOnly] = useState(isCreateMode ? 7 : (musicData?.priceMusicOnly || 7))
-  const [priceLyricsOnly, setPriceLyricsOnly] = useState(isCreateMode ? 2 : (musicData?.priceLyricsOnly || 2))
-  const [priceBoth, setPriceBoth] = useState(isCreateMode ? 7 : (musicData?.priceBoth || 7))
-  const [hasRewards, setHasRewards] = useState(isCreateMode ? true : (musicData?.grade === 1))
-  const [rewardPerPlay, setRewardPerPlay] = useState(isCreateMode ? 0.007 : (musicData?.rewardPerPlay || 0.007))
-  const [maxPlayCount, setMaxPlayCount] = useState<number | ''>(isCreateMode ? '' : (musicData?.maxPlayCount || ''))
+  const [priceRef, setPriceRef] = useState(7)
+  const [priceMusicOnly, setPriceMusicOnly] = useState(7)
+  const [priceLyricsOnly, setPriceLyricsOnly] = useState(2)
+  const [priceBoth, setPriceBoth] = useState(7)
+  const [hasRewards, setHasRewards] = useState(true)
+  const [rewardPerPlay, setRewardPerPlay] = useState(0.007)
+  const [maxPlayCount, setMaxPlayCount] = useState<number | ''>('')
+  const [totalRewardCount, setTotalRewardCount] = useState<number | ''>('')
 
   // API 설정
-  const [grade, setGrade] = useState<0 | 1 | 2>(isCreateMode ? 1 : (musicData?.grade || 0))
-  const [apiTier, setApiTier] = useState<'all' | 'premium'>(isCreateMode ? 'premium' : (musicData?.grade === 0 ? 'all' : 'premium'))
-  const [rewardsDisabled, setRewardsDisabled] = useState(isCreateMode ? false : (musicData?.grade === 0))
+  const [grade, setGrade] = useState<0 | 1 | 2>(1)
+  const [apiTier, setApiTier] = useState<'all' | 'premium'>('premium')
+  const [rewardsDisabled, setRewardsDisabled] = useState(false)
 
 
   // 카테고리 데이터
   const [categories, setCategories] = useState<Array<{id: number, name: string}>>([])
+  
+  // musicData가 변경될 때 상태 업데이트
+  useEffect(() => {
+    if (musicData && !isCreateMode) {
+      setTitle(musicData.title || '')
+      setArtist(musicData.artist || '')
+      setCategory(musicData.category || '')
+      setTags(musicData.tags || '')
+      setReleaseDate(musicData.releaseDate || '')
+      setDurationSec(musicData.durationSec || 0)
+      setMusicType(musicData.musicType || '일반')
+      setLyricist(musicData.lyricist || '')
+      setComposer(musicData.composer || '')
+      setArranger(musicData.arranger || '')
+      setIsrc(musicData.isrc || '')
+      setLyricsText(musicData.lyricsText || '')
+      setPriceRef(musicData.priceRef || 7)
+      setPriceMusicOnly(musicData.priceMusicOnly || 7)
+      setPriceLyricsOnly(musicData.priceLyricsOnly || 2)
+      setPriceBoth(musicData.priceBoth || 7)
+      setHasRewards(musicData.grade === 1)
+      setRewardPerPlay(musicData.rewardPerPlay || 0.007)
+      setMaxPlayCount(musicData.maxPlayCount || '')
+      setGrade(musicData.grade || 0)
+      setApiTier(musicData.grade === 0 ? 'all' : 'premium')
+      setRewardsDisabled(musicData.grade === 0)
+    } else if (isCreateMode) {
+      // 새로 생성할 때는 기본값으로 리셋
+      setTitle('')
+      setArtist('')
+      setCategory('')
+      setTags('')
+      setReleaseDate('')
+      setDurationSec('')
+      setMusicType('일반')
+      setLyricist('')
+      setComposer('')
+      setArranger('')
+      setIsrc('')
+      setLyricsText('')
+      setPriceRef(7)
+      setPriceMusicOnly(7)
+      setPriceLyricsOnly(2)
+      setPriceBoth(7)
+      setHasRewards(true)
+      setRewardPerPlay(0.007)
+      setMaxPlayCount('')
+      setTotalRewardCount('')
+      setGrade(1)
+      setApiTier('premium')
+      setRewardsDisabled(false)
+    }
+  }, [musicData, isCreateMode])
   
   // 필드별 오류 상태
   const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({})
@@ -136,7 +193,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     try {
       setAddingCategory(true)
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const res = await fetch(`${baseUrl}/admin/musics/categories`, {
+      const res = await apiFetch(`${baseUrl}/admin/musics/categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
@@ -167,8 +224,10 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         setRewardPerPlay(musicData.rewardPerPlay)
         setHasRewards(true)
       }
-      if (typeof musicData.maxPlayCount === 'number') {
-        setMaxPlayCount(musicData.maxPlayCount)
+      const trc = (musicData as any).totalRewardCount ?? (musicData as any).maxPlayCount
+      if (typeof trc === 'number') {
+        setTotalRewardCount(trc)
+        setMaxPlayCount(trc) // 하위호환: 내부 계산/표시 유지
         setHasRewards(true)
       }
     }
@@ -180,8 +239,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     const fetchCategories = async () => {
       try {
         console.log('카테고리 데이터 가져오기 시작...')
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-        const response = await fetch(`${baseUrl}/admin/musics/categories`)
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        const response = await apiFetch(`${baseUrl}/admin/musics/categories`)
         
         if (response.ok) {
           const data = await response.json()
@@ -210,14 +269,16 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
   // 미리보기
   const totalReward = useMemo(() => {
     const rewardPerPlayNum = Number(rewardPerPlay) || 0
-    const maxPlayCountNum = Number(maxPlayCount) || 0
-    
-    if (maxPlayCountNum > 0) {
-      return rewardPerPlayNum * maxPlayCountNum
+    // 입력 필드(maxPlayCount)를 우선 반영, 없으면 totalRewardCount 사용
+    const countSource = maxPlayCount !== '' ? maxPlayCount : totalRewardCount
+    const countNum = Number(countSource) || 0
+
+    if (countNum > 0) {
+      return rewardPerPlayNum * countNum
     }
-    
+
     return 0
-  }, [rewardPerPlay, maxPlayCount])
+  }, [rewardPerPlay, maxPlayCount, totalRewardCount])
 
   function onSelectAudio(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -371,7 +432,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         if (thumbFile) formData.append('cover', thumbFile)
 
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-        const uploadRes = await fetch(`${baseUrl}/admin/musics/upload`, {
+        const uploadRes = await apiFetch(`${baseUrl}/admin/musics/upload`, {
           method: 'POST',
           body: formData
         })
@@ -389,7 +450,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         }
 
         // 2) 음원 등록
-        const response = await fetch(`${baseUrl}/admin/musics`, {
+        const response = await apiFetch(`${baseUrl}/admin/musics`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -407,7 +468,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
             priceMusicOnly,
             priceLyricsOnly,
             rewardPerPlay,
-            maxPlayCount: maxPlayCount === '' ? null : maxPlayCount,
+            totalRewardCount: totalRewardCount === '' ? (maxPlayCount === '' ? null : maxPlayCount) : totalRewardCount,
+            maxPlayCount: maxPlayCount === '' ? (totalRewardCount === '' ? null : totalRewardCount) : maxPlayCount,
             hasRewards,
             grade,
             lyricsText: lyricsInputType === 'text' ? lyricsText : undefined,
@@ -433,27 +495,72 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         // 실시간 검증으로 이미 모든 필드가 검증되었으므로 여기서는 네트워크 오류만 처리
       }
     } else {
-      // 수정 모드: 허용 필드만 PATCH
+      // 수정 모드
       try {
-        // 상대 경로 사용
         if (!musicData?.id) throw new Error('수정 대상 ID가 없습니다.')
-        const payload: any = {
-          title, artist, category, tags, releaseDate,
-          grade, lyricsText,
-          // 가격류는 필요 시에만 보냄
-        }
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-        const res = await fetch(`${baseUrl}/admin/musics/${musicData.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(()=>({}))
-          showToastMessage('수정 실패: 금지된 필드 포함 여부를 확인하세요.', 'error')
-          console.error('수정 실패', err)
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+
+        // 1) 리워드 설정 먼저 PATCH (grade 변경 포함)
+        try {
+          const rewardPerPlayNum = Number(rewardPerPlay) || 0
+          const countSource = maxPlayCount !== '' ? maxPlayCount : totalRewardCount
+          const totalRewardCountNum = Number(countSource) || 0
+
+          const removing = !hasRewards || rewardPerPlayNum <= 0 || totalRewardCountNum <= 0
+          const rewardsPayload: any = removing
+            ? {
+                removeReward: true,
+                grade: (apiTier === 'all' ? 0 : 2) as 0 | 2,
+              }
+            : {
+                totalRewardCount: totalRewardCountNum,
+                rewardPerPlay: rewardPerPlayNum,
+              }
+
+          const rewardRes = await apiFetch(`${baseUrl}/admin/musics/${musicData.id}/rewards`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rewardsPayload)
+          })
+          if (!rewardRes.ok) {
+            const err = await rewardRes.json().catch(()=>({}))
+            console.error('리워드 수정 실패', err)
+            showToastMessage('리워드 수정 실패', 'error')
+            return
+          }
+        } catch (err) {
+          console.error('리워드 수정 에러', err)
+          showToastMessage('리워드 수정 중 오류', 'error')
           return
         }
+
+        // 2) 일반 필드 변경이 있을 때만 musics PATCH (카테고리/텍스트 등)
+        const payload: any = {}
+        if (musicData) {
+          if (title !== musicData.title) payload.title = title
+          if (artist !== musicData.artist) payload.artist = artist
+          if (releaseDate !== (musicData.releaseDate || '')) payload.releaseDate = releaseDate
+          if ((tags || '') !== (musicData.tags || '')) payload.tags = tags
+          // category는 값이 있고 변경된 경우에만
+          if (category && category !== (musicData.category || '')) payload.category = category
+          // grade는 리워드 PATCH에서 처리하므로 제외
+          if ((lyricsText || '') !== (musicData.lyricsText || '')) payload.lyricsText = lyricsText
+        }
+
+        if (Object.keys(payload).length > 0) {
+          const res = await apiFetch(`${baseUrl}/admin/musics/${musicData.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+          if (!res.ok) {
+            const err = await res.json().catch(()=>({}))
+            console.error('일반 필드 수정 실패', err)
+            showToastMessage('수정 실패: 입력값을 확인하세요.', 'error')
+            return
+          }
+        }
+
         showToastMessage('수정이 완료되었습니다!')
         setTimeout(()=> onClose(), 800)
       } catch (e) {
@@ -964,9 +1071,9 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
               {hasRewards && (
                 <div className="mt-4 rounded-lg border border-teal-500/20 bg-teal-500/10 p-4">
                   <div className="text-sm text-teal-300 font-medium mb-1">리워드 미리보기</div>
-                  {maxPlayCount ? (
+                  {(maxPlayCount !== '' || totalRewardCount !== '') ? (
                     <p className="text-sm text-white/80">
-                      총 리워드: <span className="text-sm font-semibold text-teal-300">{totalReward}</span> 토큰
+                      총 리워드: <span className="text-sm font-semibold text-teal-300">{Number(totalReward.toFixed ? totalReward.toFixed(3) : totalReward)}</span> 토큰
                     </p>
                   ) : (
                     <p className="text-sm text-white/80">최대 재생 횟수를 입력하면 총 리워드를 확인할 수 있습니다</p>

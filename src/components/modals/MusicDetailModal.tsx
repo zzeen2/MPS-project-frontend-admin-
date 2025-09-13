@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api'
 import SimpleLineChart from '@/components/charts/SimpleLineChart'
 
 type Music = {
@@ -22,6 +23,7 @@ type Music = {
   duration: number // 초 단위로 변경
   artist: string
   musicType: '일반' | 'Inst' // 음원 유형 추가
+  grade?: 0 | 1 | 2
 }
 
 type Props = {
@@ -67,6 +69,26 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
     rewardPerPlay: number | null
   }> | null>(null)
 
+  // 월 선택 상태(사용 기업 현황 탭에서 활용)
+  const [selectedYearMonth, setSelectedYearMonth] = useState<string>('')
+
+  // 사용 가능 등급 (DB grade) 최신값 유지
+  const [currentGrade, setCurrentGrade] = useState<0 | 1 | 2 | undefined>(music?.grade)
+
+  const gradeLabel = (g: number | undefined) => {
+    if (g === 0) return '모든 등급'
+    if (g === 1) return '스탠다드/비즈니스 (리워드 O)'
+    if (g === 2) return 'Standard/Business only (리워드 X)'
+    return '-'
+  }
+
+  const gradeBadgeClass = (g: number | undefined) => {
+    if (g === 0) return 'bg-green-400/15 text-green-300 border border-green-400/25'
+    if (g === 1) return 'bg-blue-400/15 text-blue-300 border border-blue-400/25'
+    if (g === 2) return 'bg-gray-400/15 text-gray-300 border border-gray-400/25'
+    return 'bg-white/10 text-white/60 border border-white/10'
+  }
+
   if (!open || !music) return null
 
   const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
@@ -92,14 +114,16 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
         const params = new URLSearchParams()
         params.set('endYearMonth', defaultYearMonth)
         params.set('months', '12')
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         const url = `${baseUrl}/admin/musics/${music.id}/rewards/monthly?` + params.toString()
-        const res = await fetch(url)
+        const res = await apiFetch(url)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (aborted) return
         const items = Array.isArray(data.items) ? data.items.map((it: any) => ({
           label: String(it.label ?? ''),
+          musicCalls: Number(it.musicCalls ?? it.music_calls ?? 0),
+          lyricsCalls: Number(it.lyricsCalls ?? it.lyrics_calls ?? 0),
           validPlays: Number(it.validPlays ?? it.valid_plays ?? 0),
           companiesUsing: Number(it.companiesUsing ?? it.companies_using ?? 0),
           monthlyLimit: it.monthlyLimit ?? it.monthly_limit ?? null,
@@ -120,6 +144,33 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
     return () => { aborted = true }
   }, [open, music?.id, defaultYearMonth])
 
+  // 상세 정보 grade 최신 조회 (모달 열릴 때)
+  useEffect(() => {
+    if (!open || !music?.id) return
+    let aborted = false
+    const fetchDetail = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        const res = await apiFetch(`${baseUrl}/admin/musics/${music.id}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (aborted) return
+        const g = Number(data.grade)
+        if ([0,1,2].includes(g)) setCurrentGrade(g as 0|1|2)
+      } catch {}
+    }
+    fetchDetail()
+    return () => { aborted = true }
+  }, [open, music?.id])
+
+  // 월 데이터 수신 후 기본 선택 월 설정
+  useEffect(() => {
+    if (!selectedYearMonth && monthlyItems && monthlyItems.length > 0) {
+      // 최신 월(배열 마지막)로 기본 선택
+      setSelectedYearMonth(monthlyItems[monthlyItems.length - 1].label)
+    }
+  }, [monthlyItems, selectedYearMonth])
+
   // 트렌드 API 페칭 함수
   useEffect(() => {
     if (!open || !music) return
@@ -137,9 +188,9 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
         params.set('segment', 'all')
         if (granularity === 'daily') params.set('yearMonth', defaultYearMonth)
         else params.set('months', '12')
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         const url = `${baseUrl}/admin/musics/${music.id}/rewards/trend?` + params.toString()
-        const res = await fetch(url)
+        const res = await apiFetch(url)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (aborted) return
@@ -167,12 +218,12 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
         setCompanyLoading(true)
         setCompanyError(null)
         const params = new URLSearchParams()
-        params.set('yearMonth', defaultYearMonth)
+        params.set('yearMonth', selectedYearMonth || defaultYearMonth)
         params.set('page', '1')
         params.set('limit', '1000')
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         const url = `${baseUrl}/admin/musics/${music.id}/rewards/companies?` + params.toString()
-        const res = await fetch(url)
+        const res = await apiFetch(url)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (aborted) return
@@ -197,7 +248,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
     }
     fetchCompanies()
     return () => { aborted = true }
-  }, [open, music?.id, activeTab, defaultYearMonth])
+  }, [open, music?.id, activeTab, selectedYearMonth, defaultYearMonth])
 
   const rewardsData = {
     labels: months,
@@ -268,10 +319,15 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
           {/* 헤더 */}
           <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
             <div>
-              <h2 className="text-lg font-semibold text-white">
-                {music.title}
-                <span className="text-white/50 font-normal"> · </span>
-                <span className="text-white/70 font-medium">{music.artist}</span>
+              <h2 className="text-lg font-semibold text-white inline-flex items-center gap-2 flex-wrap">
+                <span>
+                  {music.title}
+                  <span className="text-white/50 font-normal"> · </span>
+                  <span className="text-white/70 font-medium">{music.artist}</span>
+                </span>
+                <span className={`ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${gradeBadgeClass(currentGrade)}`}>
+                  {gradeLabel(currentGrade)}
+                </span>
               </h2>
             </div>
             <button
@@ -503,7 +559,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                       <div className="py-10 text-center text-white/60">로딩중...</div>
                     ) : companyError ? (
                       <div className="py-10 text-center text-red-400">{companyError}</div>
-                    ) : companyItems && companyItems.length > 0 ? (
+                    ) : (
                       <table className="w-full text-sm">
                         <thead className="text-center">
                           <tr className="border-b border-white/10">
@@ -515,29 +571,35 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                           </tr>
                         </thead>
                         <tbody>
-                          {companyItems.map((item) => (
-                            <tr key={`${item.companyId}`} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                              <td className="px-6 py-4 text-center">
-                                <span className={`text-sm font-bold ${item.rank <= 3 ? 'text-teal-400' : 'text-white'}`}>{item.rank}</span>
+                          {companyItems && companyItems.length > 0 ? (
+                            companyItems.map((item) => (
+                              <tr key={`${item.companyId}`} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                <td className="px-6 py-4 text-center">
+                                  <span className={`text-sm font-bold ${item.rank <= 3 ? 'text-teal-400' : 'text-white'}`}>{item.rank}</span>
+                                </td>
+                                <td className="px-6 py-4 font-medium text-white text-center">{item.companyName}</td>
+                                <td className="px-6 py-4 text-center">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                    item.tier === 'Business' ? 'bg-gradient-to-r from-purple-400/15 to-purple-500/15 text-purple-300 border border-purple-400/25' :
+                                    item.tier === 'Standard' ? 'bg-gradient-to-r from-blue-400/15 to-blue-500/15 text-blue-300 border border-blue-400/25' :
+                                    'bg-gradient-to-r from-gray-400/15 to-gray-500/15 text-gray-300 border border-gray-400/25'
+                                  }`}>
+                                    {item.tier}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-teal-400 font-medium text-center">{item.monthlyEarned.toLocaleString()} 토큰</td>
+                                <td className="px-6 py-4 text-white/80 font-medium text-center">{item.monthlyPlays.toLocaleString()}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr className="border-b border-white/5">
+                              <td className="px-6 py-6 text-center text-white/70" colSpan={5}>
+                                집계 0 (선택한 월에 리워드 발생 기업 없음)
                               </td>
-                              <td className="px-6 py-4 font-medium text-white text-center">{item.companyName}</td>
-                              <td className="px-6 py-4 text-center">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  item.tier === 'Business' ? 'bg-gradient-to-r from-purple-400/15 to-purple-500/15 text-purple-300 border border-purple-400/25' :
-                                  item.tier === 'Standard' ? 'bg-gradient-to-r from-blue-400/15 to-blue-500/15 text-blue-300 border border-blue-400/25' :
-                                  'bg-gradient-to-r from-gray-400/15 to-gray-500/15 text-gray-300 border border-gray-400/25'
-                                }`}>
-                                  {item.tier}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-teal-400 font-medium text-center">{item.monthlyEarned.toLocaleString()} 토큰</td>
-                              <td className="px-6 py-4 text-white/80 font-medium text-center">{item.monthlyPlays.toLocaleString()}</td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
-                    ) : (
-                      <div className="py-10 text-center text-white/60">데이터가 없습니다</div>
                     )}
                   </div>
                   {/* 스크롤 처리로 페이징 제거 */}

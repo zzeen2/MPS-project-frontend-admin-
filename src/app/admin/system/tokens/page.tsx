@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import Card from '@/components/ui/Card'
 import Title from '@/components/ui/Title'
 import DailyTxDetailModal from '@/components/modals/DailyTxDetailModal'
@@ -33,7 +34,9 @@ type Transaction = {
     recordCount: number
     records: Array<{
       companyId: number
+      companyName?: string
       musicId: number
+      musicTitle?: string
       playId: number
       rewardCode: number
       timestamp: string
@@ -93,7 +96,7 @@ export default function RewardsTokensPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
       
-      const response = await fetch(`${baseUrl}/admin/tokens/info`, {
+      const response = await apiFetch(`${baseUrl}/admin/tokens/info`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +119,7 @@ export default function RewardsTokensPage() {
   const fetchWalletInfo = async () => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await fetch(`${baseUrl}/admin/tokens/wallet`)
+      const response = await apiFetch(`${baseUrl}/admin/tokens/wallet`)
       if (response.ok) {
         const data = await response.json()
         setSponsorWallet(data)
@@ -145,7 +148,7 @@ export default function RewardsTokensPage() {
       
       const offset = (page - 1) * itemsPerPage
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await fetch(`${baseUrl}/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
+      const response = await apiFetch(`${baseUrl}/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -246,7 +249,7 @@ export default function RewardsTokensPage() {
       if (manualDate) {
         payload.targetDate = `${manualDate}T00:00:00+09:00`
       }
-      const res = await fetch(`${baseUrl}/test/manual-batch`, {
+      const res = await apiFetch(`${baseUrl}/test/manual-batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -287,7 +290,7 @@ export default function RewardsTokensPage() {
   const fetchTransactionDetail = async (id: string) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await fetch(`${baseUrl}/admin/tokens/transactions/${id}`)
+      const response = await apiFetch(`${baseUrl}/admin/tokens/transactions/${id}`)
       if (response.ok) {
         const data = await response.json()
         setTransactionDetail(data)
@@ -691,11 +694,13 @@ export default function RewardsTokensPage() {
                     해시 정보
                   </h3>
                   <div className="space-y-3">
-                    <div>
-                      <span className="text-white/60 text-sm block mb-2">Tx Hash:</span>
-                      <div className="font-mono text-white text-sm break-all bg-black/20 rounded-lg p-2 border border-white/10">
-                        {transactionDetail.txHash}
-                      </div>
+                    <div className="flex items-center gap-2 text-sm text-white/80">
+                      <span className="text-white/60">Tx Hash:</span>
+                      <span className="font-mono break-all">{transactionDetail.txHash}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-white/80">
+                      <span className="text-white/60">API 호출 기록 수:</span>
+                      <span>{(transactionDetail.type === 'token-distribution' ? (transactionDetail as any).apiRecordCount : transactionDetail.apiRecording?.recordCount) ?? '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -703,7 +708,7 @@ export default function RewardsTokensPage() {
 
               {/* 토큰 분배 상세 */}
               {transactionDetail.type === 'token-distribution' && transactionDetail.tokenDistribution && (
-                <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                <div className="bg-white/5 rounded-xl p-6 border border-white/10 min-h-[360px]">
                   <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-3">
                     <span className="h-4 w-1.5 rounded bg-teal-300"></span>
                     토큰 분배 내역
@@ -736,7 +741,7 @@ export default function RewardsTokensPage() {
                 </div>
               )}
 
-              {/* API 호출 기록 상세 */}
+              {/* API 호출 기록 상세 (컴팩트 테이블) */}
               {transactionDetail.type === 'api-recording' && transactionDetail.apiRecording && (
                 <div className="bg-white/5 rounded-xl p-6 border border-white/10">
                   <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-3">
@@ -744,42 +749,32 @@ export default function RewardsTokensPage() {
                     API 호출 기록
                   </h3>
                   
-                  {/* 요약 정보 */}
-                  <div className="bg-black/20 rounded-lg p-4 border border-white/10 mb-6">
-                    <div className="text-white/60 text-sm mb-1">총 기록 수</div>
-                    <div className="text-white font-semibold text-lg">{transactionDetail.apiRecording.recordCount}개</div>
-                  </div>
+                  {/* 요약 정보 제거 (요청 사항: 해시 정보 카드로 이동) */}
 
                   {/* 호출 기록 상세 */}
                   <div>
-                    <h4 className="text-white/80 font-medium mb-4">호출 기록 상세</h4>
-                    <div className="space-y-3">
-                      {transactionDetail.apiRecording.records.map((record, index) => (
-                        <div key={index} className="bg-black/20 rounded-lg p-4 border border-white/10">
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-white/60">기업 ID:</span>
-                              <span className="text-white font-medium">{record.companyId}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-white/60">음원 ID:</span>
-                              <span className="text-white font-medium">{record.musicId}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-white/60">재생 ID:</span>
-                              <span className="text-white font-medium">{record.playId}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-white/60">리워드 코드:</span>
-                              <span className="text-teal-400 font-medium">{record.rewardCode}</span>
-                            </div>
-                            <div className="col-span-2 flex justify-between">
-                              <span className="text-white/60">시간:</span>
-                              <span className="text-white font-medium">{record.timestamp}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <h4 className="text-white/80 font-medium mb-3">호출기록 상세</h4>
+                    <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
+                      <table className="w-full text-xs">
+                        <thead className="bg-neutral-900/60 text-white/60">
+                          <tr className="border-b border-white/10">
+                            <th className="py-2.5 px-3 text-center">시간</th>
+                            <th className="py-2.5 px-3 text-center">기업 (기업 아이디)</th>
+                            <th className="py-2.5 px-3 text-center">음원 (음원 아이디)</th>
+                            <th className="py-2.5 px-3 text-center">재생 ID</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {transactionDetail.apiRecording.records.map((record, index) => (
+                            <tr key={index} className="border-b border-white/5 hover:bg-white/10 transition-colors">
+                              <td className="py-2 px-3 font-mono text-white/70 whitespace-nowrap text-center">{record.timestamp || '-'}</td>
+                              <td className="py-2 px-3 text-white/80 whitespace-nowrap text-center">{record.companyName ? `${record.companyName} (${record.companyId})` : `- (${record.companyId})`}</td>
+                              <td className="py-2 px-3 text-white whitespace-nowrap text-center">{record.musicTitle ? `${record.musicTitle} (${record.musicId})` : `- (${record.musicId})`}</td>
+                              <td className="py-2 px-3 font-mono text-white/70 whitespace-nowrap text-center">{record.playId}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>

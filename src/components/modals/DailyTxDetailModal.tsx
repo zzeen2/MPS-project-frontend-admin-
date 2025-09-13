@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface DailyTxDetailModalProps {
     open: boolean
@@ -35,8 +36,8 @@ export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDeta
         
         setLoading(true)
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-            const response = await fetch(`${baseUrl}/api/admin/tokens/batches/${batch.date}`)
+            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+            const response = await apiFetch(`${baseUrl}/api/admin/tokens/batches/${batch.date}`)
             if (response.ok) {
                 const data = await response.json()
                 setCompanyDistributions(data.companyDistributions || [])
@@ -63,10 +64,10 @@ export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDeta
                 </div>
                 <div className="overflow-y-auto p-6 space-y-8">
                     <section>
-                        <h3 className="text-sm font-semibold text-white/80 mb-3">기본 메타</h3>
+                        <h3 className="text-sm font-semibold text-white/80 mb-3">트랜잭션 정보</h3>
                         <div className="grid gap-4 md:grid-cols-3 text-sm">
                             <div className="space-y-1">
-                                <div className="text-white/50">실행 시간</div>
+                                <div className="text-white/50">시간 (온체인 기록)</div>
                                 <div className="text-white font-medium">{batch.executedAt || '-'}</div>
                             </div>
                             <div className="space-y-1">
@@ -88,6 +89,10 @@ export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDeta
                             <div className="space-y-1">
                                 <div className="text-white/50">온체인 기록</div>
                                 <div className="text-white/80">{batch.onchainRecordedPlayCount.toLocaleString()}</div>
+                            </div>
+                            <div className="space-y-1">
+                                <div className="text-white/50">API 호출 기록 수</div>
+                                <div className="text-white/80">{(batch as any).rewardedPlayCount?.toLocaleString?.() || '-'}</div>
                             </div>
                             <div className="space-y-1 md:col-span-3">
                                 <div className="text-white/50">Tx Hash</div>
@@ -136,7 +141,7 @@ export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDeta
                     </section>
 
                     <section>
-                        <h3 className="text-sm font-semibold text-white/80 mb-3">유효재생 히스토리</h3>
+                        <h3 className="text-sm font-semibold text-white/80 mb-3">호출기록 상세</h3>
                         <div className="mb-3 flex items-center gap-3 text-xs text-white/50">
                             <span>해당 일자 집계에 포함된 유효재생 로그</span>
                         </div>
@@ -150,18 +155,18 @@ export default function DailyTxDetailModal({ open, onClose, batch }: DailyTxDeta
                                             <tr className="border-b border-white/10">
                                                 <th className="py-2 px-3 text-left">시간</th>
                                                 <th className="py-2 px-3 text-left">기업</th>
+                                                <th className="py-2 px-3 text-left">재생 ID</th>
                                                 <th className="py-2 px-3 text-left">음원</th>
-                                                <th className="py-2 px-3 text-left">음원 ID</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {validPlayHistory.length > 0 ? (
                                                 validPlayHistory.map((row: any) => (
                                                     <tr key={row.id} className="border-b border-white/5 hover:bg-white/10 transition-colors">
-                                                        <td className="py-2 px-3 font-mono text-white/70">{row.time}</td>
-                                                        <td className="py-2 px-3 text-white/80">{row.company}</td>
-                                                        <td className="py-2 px-3 text-white">{row.musicTitle}</td>
-                                                        <td className="py-2 px-3 font-mono text-white/60">{row.musicId}</td>
+                                                        <td className="py-1.5 px-3 font-mono text-white/70">{row.time}</td>
+                                                        <td className="py-1.5 px-3 text-white/80">{row.company}</td>
+                                                        <td className="py-1.5 px-3 font-mono text-white/70">{row.id}</td>
+                                                        <td className="py-1.5 px-3 text-white">{row.musicTitle}</td>
                                                     </tr>
                                                 ))
                                             ) : (
