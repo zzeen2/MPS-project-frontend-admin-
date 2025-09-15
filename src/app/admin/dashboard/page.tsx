@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { apiFetch } from '@/lib/api'
 import { io, Socket } from 'socket.io-client'
 import DashboardHeader from '@/components/layout/DashboardHeader'
 import CompanyTotalCard from '@/components/cards/CompanyTotalCard'
@@ -40,8 +39,11 @@ export default function DashboardPage() {
     callType: string;
     validity: string;
     company: string; 
-    timestamp: string 
+    timestamp: string;
+    musicTitle?: string;
+    musicId?: number;
   }>>([])
+  const [musicTitleById, setMusicTitleById] = useState<Record<number, string>>({})
   const [apiStatusFilter, setApiStatusFilter] = useState<'all' | 'music' | 'lyrics'>('all')
   const [realtimeTopTracks, setRealtimeTopTracks] = useState<Array<{ 
     id: number;
@@ -77,8 +79,24 @@ export default function DashboardPage() {
       console.log('🔍 WebSocket 실시간 데이터 업데이트:', data)
       console.log('🔍 WebSocket apiCalls length:', data.apiCalls?.length || 0)
       console.log('🔍 WebSocket topTracks length:', data.topTracks?.length || 0)
-      // WebSocket 데이터 구조에 맞게 수정
-      setRealtimeApiStatus(data.apiCalls || [])
+
+      const parsed = (data.apiCalls || []).map((item: any) => {
+        const endpoint: string = item.endpoint || ''
+        const m = endpoint.match(/musics\/(\d+)/)
+        const mid = m ? Number(m[1]) : undefined
+        return {
+          id: item.id || Math.random(),
+          status: item.status || 'error',
+          endpoint,
+          callType: item.callType || (endpoint.includes('lyrics') ? '가사 호출' : '음원 호출'),
+          validity: item.validity || '유효재생',
+          company: item.company || 'Unknown',
+          timestamp: item.timestamp || new Date().toISOString(),
+          musicTitle: item.musicTitle || item.music_title || item.trackTitle || item.title || undefined,
+          musicId: mid,
+        }
+      })
+      setRealtimeApiStatus(parsed)
       setRealtimeTopTracks(data.topTracks || [])
       
       // 마지막 업데이트 시간 업데이트
@@ -143,7 +161,7 @@ export default function DashboardPage() {
           baseUrl: baseUrl,
           fullUrl: `${baseUrl}/admin/companies/stats/hourly-plays`
         })
-        const res = await apiFetch(`${baseUrl}/admin/companies/stats/hourly-plays`)
+        const res = await fetch(`${baseUrl}/admin/companies/stats/hourly-plays`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const j = await res.json()
         const data = (j.labels || []).map((label: string, i: number) => ({
@@ -171,8 +189,8 @@ export default function DashboardPage() {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
           
           const [apiRes, tracksRes] = await Promise.all([
-            apiFetch(`${baseUrl}/admin/musics/realtime/api-status`),
-            apiFetch(`${baseUrl}/admin/musics/realtime/top-tracks`)
+            fetch(`${baseUrl}/admin/musics/realtime/api-status`),
+            fetch(`${baseUrl}/admin/musics/realtime/top-tracks`)
           ])
           
           console.log('API responses:', {
@@ -184,24 +202,31 @@ export default function DashboardPage() {
             const apiData = await apiRes.json()
             console.log('🔍 API Status Data:', apiData)
             console.log('🔍 API Status items length:', apiData.items?.length || 0)
-            // HTTP API 응답 구조에 맞게 수정
-            const items = (apiData.items || []).map((item: any) => ({
-              id: item.id || Math.random(),
-              status: item.status || 'error',
-              endpoint: item.endpoint || '/api/unknown',
-              callType: item.callType || (item.endpoint?.includes('lyrics') ? '가사 호출' : '음원 호출'),
-              validity: item.validity || '유효재생',
-              company: item.company || 'Unknown',
-              timestamp: item.timestamp || new Date().toLocaleString('ko-KR', {
-                year: '2-digit',
-                month: '2-digit',
-                day: '2-digit', 
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-              }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
-            }))
+            // HTTP API 응답 구조에 맞게 수정 + musicId 파싱
+            const items = (apiData.items || []).map((item: any) => {
+              const endpoint = item.endpoint || '/api/unknown'
+              const m = (endpoint as string).match(/musics\/(\d+)/)
+              const mid = m ? Number(m[1]) : undefined
+              return ({
+                id: item.id || Math.random(),
+                status: item.status || 'error',
+                endpoint,
+                callType: item.callType || (endpoint.includes('lyrics') ? '가사 호출' : '음원 호출'),
+                validity: item.validity || '유효재생',
+                company: item.company || 'Unknown',
+                musicTitle: item.musicTitle || item.music_title || item.trackTitle || item.title || undefined,
+                musicId: mid,
+                timestamp: item.timestamp || new Date().toLocaleString('ko-KR', {
+                  year: '2-digit',
+                  month: '2-digit',
+                  day: '2-digit', 
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+              })
+            })
             console.log('🔍 Processed API Status items:', items)
             setRealtimeApiStatus(items)
           } else {
@@ -234,6 +259,25 @@ export default function DashboardPage() {
 
     return () => clearInterval(interval)
   }, [isConnected]) // isConnected 상태 변경 시 재실행
+
+  const formatKST = (ts: string) => {
+    try {
+      const d = new Date(ts)
+      if (isNaN(d.getTime())) return ts
+      return d.toLocaleString('ko-KR', {
+        year: '2-digit',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: 'Asia/Seoul'
+      })
+    } catch {
+      return ts
+    }
+  }
 
   return (
     <div className="w-full px-6 py-6">
@@ -334,9 +378,9 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="text-center py-2 px-3 text-xs font-medium text-white/60">ID</th>
-                    <th className="text-center py-2 px-3 text-xs font-medium text-white/60">성공여부</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-white/60">유효재생</th>
                     <th className="text-center py-2 px-3 text-xs font-medium text-white/60">유형</th>
-                    <th className="text-center py-2 px-3 text-xs font-medium text-white/60">리워드</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-white/60">음원</th>
                     <th className="text-center py-2 px-3 text-xs font-medium text-white/60">기업</th>
                     <th className="text-center py-2 px-3 text-xs font-medium text-white/60">시간</th>
                   </tr>
@@ -357,15 +401,12 @@ export default function DashboardPage() {
                       <tr key={idx} className="border-b border-white/5">
                         <td className="py-2 px-3 text-white/60 font-mono text-xs text-center">{item.id}</td>
                         <td className="py-2 px-3 text-center">
-                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
                             item.status === 'success' 
                               ? 'bg-green-500/20 text-green-400' 
                               : 'bg-red-500/20 text-red-400'
                           }`}>
-                            <div className={`h-1.5 w-1.5 rounded-full ${
-                              item.status === 'success' ? 'bg-green-400' : 'bg-red-400'
-                            }`} />
-                            {item.status === 'success' ? '성공' : '실패'}
+                            {item.status === 'success' ? 'O' : 'X'}
                           </div>
                         </td>
                         <td className="py-2 px-3 text-white/80 text-center">
@@ -377,17 +418,13 @@ export default function DashboardPage() {
                             {item.callType === '음원 호출' ? '음원' : '가사'}
                           </span>
                         </td>
-                        <td className="py-2 px-3 text-white/80 text-center">
-                          <div className="flex items-center justify-center">
-                            {item.validity === '리워드 발생' 
-                              ? '🟡' 
-                              : item.validity === '유효재생 (리워드 없음)'
-                              ? '🟡'
-                              : '🔴'}
-                          </div>
+                        <td className="py-2 px-3 text-white/80 text-center max-w-[260px]">
+                          <span title={item.musicTitle || ''} className="inline-block truncate align-top max-w-[240px]">
+                            {item.musicTitle || (item.musicId ? `#${item.musicId}` : '-')}
+                          </span>
                         </td>
                         <td className="py-2 px-3 text-white/60 text-center">{item.company}</td>
-                        <td className="py-2 px-3 text-white/40 text-center font-mono text-xs">{item.timestamp}</td>
+                        <td className="py-2 px-3 text-white/40 text-center font-mono text-xs">{formatKST(item.timestamp)}</td>
                       </tr>
                         ))
                     ) : (
@@ -410,18 +447,18 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left py-2 px-3 text-xs font-medium text-white/60">순위</th>
-                    <th className="text-left py-2 px-3 text-xs font-medium text-white/60">음원명</th>
-                    <th className="text-left py-2 px-3 text-xs font-medium text-white/60">24시 유효재생</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-white/60">순위</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-white/60">음원명</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-white/60">24시 유효재생</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {realtimeTopTracks.length > 0 ? (
                     realtimeTopTracks.map(({ rank, title, validPlays }) => (
                       <tr key={rank} className="border-b border-white/5">
-                        <td className={`py-2 px-3 font-medium ${rank <= 3 ? 'text-teal-300' : 'text-white/60'}`}>{rank}</td>
-                        <td className="py-2 px-3 text-white/80">{title}</td>
-                        <td className="py-2 px-3 text-white/60">{validPlays.toLocaleString()}</td>
+                        <td className={`py-2 px-3 font-medium text-center ${rank <= 3 ? 'text-teal-300' : 'text-white/60'}`}>{rank}</td>
+                        <td className="py-2 px-3 text-white/80 text-center">{title}</td>
+                        <td className="py-2 px-3 text-white/60 text-center">{validPlays.toLocaleString()}</td>
                       </tr>
                     ))
                   ) : (

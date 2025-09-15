@@ -1,6 +1,5 @@
 'use client'
 import React, { useState } from 'react'
-import { apiFetch } from '@/lib/api'
 
 type Music = {
   id: string
@@ -85,7 +84,7 @@ export default function BulkRewardEditModal({ open, onClose, selectedMusics, onS
           }
 
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-          const response = await apiFetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
+          const response = await fetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -104,7 +103,7 @@ export default function BulkRewardEditModal({ open, onClose, selectedMusics, onS
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
           if (withRemove) {
             const body = { totalRewardCount: 0, rewardPerPlay: 0, removeReward: true, grade: withRemoveGrade }
-            const res = await apiFetch(`${baseUrl}/admin/musics/${music.id}/rewards`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+            const res = await fetch(`${baseUrl}/admin/musics/${music.id}/rewards`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             return true
           } else {
@@ -122,7 +121,7 @@ export default function BulkRewardEditModal({ open, onClose, selectedMusics, onS
               newLimit = withLimitAbs !== '' ? Number(withLimitAbs) : baseLimit
             }
             const body = { totalRewardCount: newLimit, rewardPerPlay: newRpp }
-            const res = await apiFetch(`${baseUrl}/admin/musics/${music.id}/rewards`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+            const res = await fetch(`${baseUrl}/admin/musics/${music.id}/rewards`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             return true
           }
@@ -135,7 +134,7 @@ export default function BulkRewardEditModal({ open, onClose, selectedMusics, onS
           const lim = withoutLimitVal === '' ? 0 : Number(withoutLimitVal)
           const body = { totalRewardCount: lim, rewardPerPlay: rpp }
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-          const res = await apiFetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
+          const res = await fetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
           })
           if (!res.ok) throw new Error(`HTTP ${res.status}`)

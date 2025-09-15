@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { apiFetch } from '@/lib/api'
 import Card from '@/components/ui/Card'
 import Title from '@/components/ui/Title'
 import DailyTxDetailModal from '@/components/modals/DailyTxDetailModal'
@@ -13,6 +12,7 @@ type Transaction = {
   id: string
   type: TransactionType
   timestamp: string
+  blockchainRecordedAt?: string
   txHash: string
   status: 'success' | 'pending' | 'failed'
   blockNumber: number | null
@@ -96,7 +96,7 @@ export default function RewardsTokensPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
       
-      const response = await apiFetch(`${baseUrl}/admin/tokens/info`, {
+      const response = await fetch(`${baseUrl}/admin/tokens/info`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -119,26 +119,14 @@ export default function RewardsTokensPage() {
   const fetchWalletInfo = async () => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await apiFetch(`${baseUrl}/admin/tokens/wallet`)
+      const response = await fetch(`${baseUrl}/admin/tokens/wallet`)
       if (response.ok) {
         const data = await response.json()
         setSponsorWallet(data)
-      } else {
-        // API 실패 시 Mock 데이터 사용
-        setSponsorWallet({
-          address: "0x1234567890123456789012345678901234567890",
-          ethBalance: 0.5,
-          lastUpdated: new Date().toISOString()
-        })
       }
     } catch (error) {
       console.error('지갑 정보 조회 실패:', error)
-      // 에러 발생 시 Mock 데이터 사용
-      setSponsorWallet({
-        address: "0x1234567890123456789012345678901234567890",
-        ethBalance: 0.5,
-        lastUpdated: new Date().toISOString()
-      })
+      // 실패 시 더미 데이터 표시하지 않음
     }
   }
 
@@ -148,11 +136,30 @@ export default function RewardsTokensPage() {
       
       const offset = (page - 1) * itemsPerPage
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await apiFetch(`${baseUrl}/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
+      const response = await fetch(`${baseUrl}/admin/tokens/transactions?limit=${itemsPerPage}&offset=${offset}`)
       
       if (response.ok) {
         const data = await response.json()
-        setTransactions(data)
+        // 정규화: 시간은 blockchain_recorded_at 우선, 타입은 payload 기반 보정
+        const normalized: Transaction[] = (Array.isArray(data) ? data : []).map((t: any) => {
+          const hasTokenDist = !!t.tokenDistribution && (t.tokenDistribution.recipientCount ?? 0) > 0
+          const inferredType: TransactionType = t.type
+            || (hasTokenDist ? 'token-distribution' : 'api-recording')
+          return {
+            id: String(t.id ?? t.txId ?? t.hash ?? Math.random()),
+            type: inferredType,
+            timestamp: String(t.blockchainRecordedAt ?? t.blockchain_recorded_at ?? t.timestamp ?? ''),
+            blockchainRecordedAt: String(t.blockchainRecordedAt ?? t.blockchain_recorded_at ?? ''),
+            txHash: String(t.txHash ?? t.hash ?? ''),
+            status: (t.status ?? 'pending') as any,
+            blockNumber: t.blockNumber ?? null,
+            gasUsed: t.gasUsed ?? null,
+            gasPrice: t.gasPrice ?? null,
+            tokenDistribution: t.tokenDistribution,
+            apiRecording: t.apiRecording,
+          }
+        })
+        setTransactions(normalized)
         
         // 페이지네이션 정보 업데이트 (실제 API에서 totalCount를 반환한다고 가정)
         const estimatedTotal = data.length === itemsPerPage ? page * itemsPerPage + 1 : page * itemsPerPage
@@ -249,7 +256,7 @@ export default function RewardsTokensPage() {
       if (manualDate) {
         payload.targetDate = `${manualDate}T00:00:00+09:00`
       }
-      const res = await apiFetch(`${baseUrl}/test/manual-batch`, {
+      const res = await fetch(`${baseUrl}/test/manual-batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -290,10 +297,24 @@ export default function RewardsTokensPage() {
   const fetchTransactionDetail = async (id: string) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await apiFetch(`${baseUrl}/admin/tokens/transactions/${id}`)
+      const response = await fetch(`${baseUrl}/admin/tokens/transactions/${id}`)
       if (response.ok) {
         const data = await response.json()
-        setTransactionDetail(data)
+        const hasTokenDist = !!data?.tokenDistribution && (data?.tokenDistribution?.recipientCount ?? 0) > 0
+        const inferredType: TransactionType = data?.type || (hasTokenDist ? 'token-distribution' : 'api-recording')
+        setTransactionDetail({
+          id: String(data.id ?? id),
+          type: inferredType,
+          timestamp: String(data.blockchainRecordedAt ?? data.blockchain_recorded_at ?? data.timestamp ?? ''),
+          blockchainRecordedAt: String(data.blockchainRecordedAt ?? data.blockchain_recorded_at ?? ''),
+          txHash: String(data.txHash ?? data.hash ?? ''),
+          status: (data.status ?? 'pending') as any,
+          blockNumber: data.blockNumber ?? null,
+          gasUsed: data.gasUsed ?? null,
+          gasPrice: data.gasPrice ?? null,
+          tokenDistribution: data.tokenDistribution,
+          apiRecording: data.apiRecording,
+        })
       } else {
         console.error('트랜잭션 상세 조회 실패:', response.status)
         setTransactionDetail(null)
@@ -551,7 +572,7 @@ export default function RewardsTokensPage() {
                     setSelectedTransaction(tx)
                     fetchTransactionDetail(tx.id)
                   }}>
-                    <td className="px-6 py-4 text-center font-mono text-xs text-white/80">{tx.timestamp}</td>
+                    <td className="px-6 py-4 text-center font-mono text-xs text-white/80">{new Date(tx.blockchainRecordedAt || tx.timestamp).toLocaleString('ko-KR', { hour12: false, timeZone: 'Asia/Seoul' })}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getTransactionTypeColor(tx.type)}`}>
                         {getTransactionTypeText(tx.type)}
@@ -699,8 +720,8 @@ export default function RewardsTokensPage() {
                       <span className="font-mono break-all">{transactionDetail.txHash}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-white/80">
-                      <span className="text-white/60">API 호출 기록 수:</span>
-                      <span>{(transactionDetail.type === 'token-distribution' ? (transactionDetail as any).apiRecordCount : transactionDetail.apiRecording?.recordCount) ?? '-'}</span>
+                      <span className="text-white/60">이벤트 수:</span>
+                      <span>{transactionDetail.type === 'token-distribution' ? `${transactionDetail.tokenDistribution?.recipientCount ?? 0}개 Transfer` : `${transactionDetail.apiRecording?.recordCount ?? 0}개 PlayRecorded`}</span>
                     </div>
                   </div>
                 </div>

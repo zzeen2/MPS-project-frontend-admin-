@@ -49,7 +49,7 @@ export default function ApiManagementPage() {
   // API 호출 함수들
   const fetchApiStats = async (period: string) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
       const response = await fetch(`${baseUrl}/admin/system/api/stats?period=${period}`)
       if (!response.ok) throw new Error('Failed to fetch API stats')
       const data = await response.json()
@@ -61,7 +61,7 @@ export default function ApiManagementPage() {
 
   const fetchPieChartData = async (period: string) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
       const response = await fetch(`${baseUrl}/admin/system/api/chart?period=${period}`)
       if (!response.ok) throw new Error('Failed to fetch pie chart data')
       const data = await response.json()
@@ -73,7 +73,7 @@ export default function ApiManagementPage() {
 
   const fetchTrendChartData = async (period: string) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
       const response = await fetch(`${baseUrl}/admin/system/api/chart?period=${period}`)
       if (!response.ok) throw new Error('Failed to fetch trend chart data')
       const data = await response.json()
@@ -91,7 +91,7 @@ export default function ApiManagementPage() {
         sortBy,
         sortOrder
       })
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
       const response = await fetch(`${baseUrl}/admin/system/api/keys?${params}`)
       if (!response.ok) throw new Error('Failed to fetch API keys')
       const data = await response.json()

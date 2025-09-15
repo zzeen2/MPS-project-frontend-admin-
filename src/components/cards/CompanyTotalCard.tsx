@@ -27,7 +27,7 @@ export default function CompanyTotalCard() {
       try {
         setLoading(true)
         setError(null)
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         const curRes = await fetch(`${baseUrl}/admin/companies/stats/total`)
         if (!curRes.ok) throw new Error(`HTTP ${curRes.status}`)
         const cur = await curRes.json()

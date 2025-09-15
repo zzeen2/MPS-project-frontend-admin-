@@ -18,7 +18,7 @@ export default function PieTierDistribution() {
       try {
         setLoading(true)
         setError(null)
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         const res = await fetch(`${baseUrl}/admin/companies/stats/tier-distribution`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const j = await res.json()

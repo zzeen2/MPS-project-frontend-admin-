@@ -1,6 +1,5 @@
 'use client'
 import React, { useState } from 'react'
-import { apiFetch } from '@/lib/api'
 
 type Music = {
   id: string
@@ -58,7 +57,7 @@ export default function RewardEditModal({ open, onClose, music, onSuccess }: Rew
     
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await apiFetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
+      const response = await fetch(`${baseUrl}/admin/musics/${music.id}/rewards`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

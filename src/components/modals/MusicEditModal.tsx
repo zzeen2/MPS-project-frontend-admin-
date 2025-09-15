@@ -2,7 +2,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import Card from '@/components/ui/Card'
 import Title from '@/components/ui/Title'
-import { apiFetch } from '@/lib/api'
 
 type Props = { 
   open: boolean; 
@@ -192,8 +191,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
     }
     try {
       setAddingCategory(true)
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-      const res = await apiFetch(`${baseUrl}/admin/musics/categories`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+      const res = await fetch(`${baseUrl}/admin/musics/categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
@@ -240,7 +239,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
       try {
         console.log('카테고리 데이터 가져오기 시작...')
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-        const response = await apiFetch(`${baseUrl}/admin/musics/categories`)
+        const response = await fetch(`${baseUrl}/admin/musics/categories`)
         
         if (response.ok) {
           const data = await response.json()
@@ -431,8 +430,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         if (lyricsInputType === 'file' && lyricsFile) formData.append('lyrics', lyricsFile)
         if (thumbFile) formData.append('cover', thumbFile)
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
-        const uploadRes = await apiFetch(`${baseUrl}/admin/musics/upload`, {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        const uploadRes = await fetch(`${baseUrl}/admin/musics/upload`, {
           method: 'POST',
           body: formData
         })
@@ -450,7 +449,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         }
 
         // 2) 음원 등록
-        const response = await apiFetch(`${baseUrl}/admin/musics`, {
+        const response = await fetch(`${baseUrl}/admin/musics`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -517,7 +516,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
                 rewardPerPlay: rewardPerPlayNum,
               }
 
-          const rewardRes = await apiFetch(`${baseUrl}/admin/musics/${musicData.id}/rewards`, {
+          const rewardRes = await fetch(`${baseUrl}/admin/musics/${musicData.id}/rewards`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(rewardsPayload)
@@ -548,7 +547,7 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
         }
 
         if (Object.keys(payload).length > 0) {
-          const res = await apiFetch(`${baseUrl}/admin/musics/${musicData.id}`, {
+          const res = await fetch(`${baseUrl}/admin/musics/${musicData.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

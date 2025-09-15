@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { apiFetch } from '@/lib/api'
 import SimpleLineChart from '@/components/charts/SimpleLineChart'
 
 type Music = {
@@ -33,7 +32,6 @@ type Props = {
 }
 
 export default function MusicDetailModal({ open, onClose, music }: Props) {
-  const [activeTab, setActiveTab] = useState<'usage' | 'rewards'>('usage')
   const [musicGranularity, setMusicGranularity] = useState<'monthly' | 'daily'>('monthly')
   const [lyricsGranularity, setLyricsGranularity] = useState<'monthly' | 'daily'>('monthly')
   const [musicTrend, setMusicTrend] = useState<{ labels: string[]; series: Array<{ label: string; data: number[] }> } | null>(null)
@@ -42,19 +40,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
   const [lyricsLoading, setLyricsLoading] = useState(false)
   const [musicError, setMusicError] = useState<string | null>(null)
   const [lyricsError, setLyricsError] = useState<string | null>(null)
-  const [companyLoading, setCompanyLoading] = useState(false)
-  const [companyError, setCompanyError] = useState<string | null>(null)
-  const [companyItems, setCompanyItems] = useState<Array<{
-    rank: number
-    companyId: number
-    companyName: string
-    tier: 'Free' | 'Standard' | 'Business'
-    monthlyEarned: number
-    monthlyPlays: number
-  }> | null>(null)
-  const [companyTotal, setCompanyTotal] = useState(0)
-  const [companyPage] = useState(1)
-  const [companyLimit] = useState(1000)
+  
   const [monthlyLoading, setMonthlyLoading] = useState(false)
   const [monthlyError, setMonthlyError] = useState<string | null>(null)
   const [monthlyItems, setMonthlyItems] = useState<Array<{
@@ -69,8 +55,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
     rewardPerPlay: number | null
   }> | null>(null)
 
-  // 월 선택 상태(사용 기업 현황 탭에서 활용)
-  const [selectedYearMonth, setSelectedYearMonth] = useState<string>('')
+  
 
   // 사용 가능 등급 (DB grade) 최신값 유지
   const [currentGrade, setCurrentGrade] = useState<0 | 1 | 2 | undefined>(music?.grade)
@@ -103,6 +88,8 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
   const dailyLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}일`)
   const defaultYearMonth = `${year}-${String(month).padStart(2, '0')}`
 
+  
+
   // 월별 리워드 현황 API 페칭
   useEffect(() => {
     if (!open || !music) return
@@ -116,7 +103,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
         params.set('months', '12')
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         const url = `${baseUrl}/admin/musics/${music.id}/rewards/monthly?` + params.toString()
-        const res = await apiFetch(url)
+        const res = await fetch(url)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (aborted) return
@@ -151,7 +138,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
     const fetchDetail = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-        const res = await apiFetch(`${baseUrl}/admin/musics/${music.id}`)
+        const res = await fetch(`${baseUrl}/admin/musics/${music.id}`)
         if (!res.ok) return
         const data = await res.json()
         if (aborted) return
@@ -163,13 +150,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
     return () => { aborted = true }
   }, [open, music?.id])
 
-  // 월 데이터 수신 후 기본 선택 월 설정
-  useEffect(() => {
-    if (!selectedYearMonth && monthlyItems && monthlyItems.length > 0) {
-      // 최신 월(배열 마지막)로 기본 선택
-      setSelectedYearMonth(monthlyItems[monthlyItems.length - 1].label)
-    }
-  }, [monthlyItems, selectedYearMonth])
+  
 
   // 트렌드 API 페칭 함수
   useEffect(() => {
@@ -190,7 +171,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
         else params.set('months', '12')
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         const url = `${baseUrl}/admin/musics/${music.id}/rewards/trend?` + params.toString()
-        const res = await apiFetch(url)
+        const res = await fetch(url)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (aborted) return
@@ -209,46 +190,7 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
     return () => { aborted = true }
   }, [open, music?.id, musicGranularity, lyricsGranularity])
 
-  // 사용 기업 현황 API 페칭
-  useEffect(() => {
-    if (!open || !music || activeTab !== 'rewards') return
-    let aborted = false
-    const fetchCompanies = async () => {
-      try {
-        setCompanyLoading(true)
-        setCompanyError(null)
-        const params = new URLSearchParams()
-        params.set('yearMonth', selectedYearMonth || defaultYearMonth)
-        params.set('page', '1')
-        params.set('limit', '1000')
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-        const url = `${baseUrl}/admin/musics/${music.id}/rewards/companies?` + params.toString()
-        const res = await apiFetch(url)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
-        if (aborted) return
-        const items = Array.isArray(data.items) ? data.items.map((it: any) => ({
-          rank: Number(it.rank ?? 0),
-          companyId: Number(it.companyId ?? it.company_id ?? 0),
-          companyName: String(it.companyName ?? it.company_name ?? ''),
-          tier: (it.tier ?? 'Free') as any,
-          monthlyEarned: Number(it.monthlyEarned ?? it.monthly_earned ?? 0),
-          monthlyPlays: Number(it.monthlyPlays ?? it.monthly_plays ?? 0),
-        })) : []
-        setCompanyItems(items)
-        setCompanyTotal(Number(data.total ?? 0))
-      } catch (e: any) {
-        if (aborted) return
-        setCompanyError(e.message || '조회 실패')
-        setCompanyItems([])
-        setCompanyTotal(0)
-      } finally {
-        if (!aborted) setCompanyLoading(false)
-      }
-    }
-    fetchCompanies()
-    return () => { aborted = true }
-  }, [open, music?.id, activeTab, selectedYearMonth, defaultYearMonth])
+  
 
   const rewardsData = {
     labels: months,
@@ -340,32 +282,13 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
             </button>
           </div>
 
-          {/* 탭 네비게이션 */}
-          <div className="flex border-b border-white/10 flex-shrink-0">
-                          {[
-                { id: 'usage', label: '리워드 발생 현황' },
-                { id: 'rewards', label: '사용 기업 현황' }
-              ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-6 py-4 text-sm font-medium transition-all duration-200 border-b-2 ${
-                  activeTab === tab.id
-                    ? 'text-teal-400 border-teal-400'
-                    : 'text-white/60 border-transparent hover:text-white/80 hover:border-white/20'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          {/* 탭 네비게이션 제거 (사용 기업 현황 탭 삭제) */}
 
           {/* 콘텐츠 영역 */}
           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
             {/* 기본 정보 섹션 제거 */}
 
-            {/* 사용 현황 탭 */}
-            {activeTab === 'usage' && (
+            {/* 사용 현황 */}
               <div className="space-y-6">
                 {/* 월별 API 사용량 차트: 음악/가사 분리 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -536,76 +459,6 @@ export default function MusicDetailModal({ open, onClose, music }: Props) {
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* 기업별 리워드 적립 현황 탭 복원 */}
-            {activeTab === 'rewards' && (
-              <div className="space-y-6">
-                {/* 사용 기업 현황 */}
-                <div className="rounded-xl border border-white/10 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-3">
-                      <span className="h-4 w-1.5 rounded bg-teal-300"></span>
-                      월별 사용 기업 현황
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-white/60 text-sm">{defaultYearMonth}</span>
-                    </div>
-                  </div>
-                  
-                  {/* 선택된 월의 모든 사용 기업 테이블 */}
-                  <div className="overflow-x-auto">
-                    {companyLoading ? (
-                      <div className="py-10 text-center text-white/60">로딩중...</div>
-                    ) : companyError ? (
-                      <div className="py-10 text-center text-red-400">{companyError}</div>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead className="text-center">
-                          <tr className="border-b border-white/10">
-                            <th className="px-6 py-4 text-white/80 font-medium text-center">순위</th>
-                            <th className="px-6 py-4 text-white/80 font-medium text-center">기업명</th>
-                            <th className="px-6 py-4 text-white/80 font-medium text-center">등급</th>
-                            <th className="px-6 py-4 text-white/80 font-medium text-center">월 리워드 적립</th>
-                            <th className="px-6 py-4 text-white/80 font-medium text-center">유효 재생수</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {companyItems && companyItems.length > 0 ? (
-                            companyItems.map((item) => (
-                              <tr key={`${item.companyId}`} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                <td className="px-6 py-4 text-center">
-                                  <span className={`text-sm font-bold ${item.rank <= 3 ? 'text-teal-400' : 'text-white'}`}>{item.rank}</span>
-                                </td>
-                                <td className="px-6 py-4 font-medium text-white text-center">{item.companyName}</td>
-                                <td className="px-6 py-4 text-center">
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                    item.tier === 'Business' ? 'bg-gradient-to-r from-purple-400/15 to-purple-500/15 text-purple-300 border border-purple-400/25' :
-                                    item.tier === 'Standard' ? 'bg-gradient-to-r from-blue-400/15 to-blue-500/15 text-blue-300 border border-blue-400/25' :
-                                    'bg-gradient-to-r from-gray-400/15 to-gray-500/15 text-gray-300 border border-gray-400/25'
-                                  }`}>
-                                    {item.tier}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 text-teal-400 font-medium text-center">{item.monthlyEarned.toLocaleString()} 토큰</td>
-                                <td className="px-6 py-4 text-white/80 font-medium text-center">{item.monthlyPlays.toLocaleString()}</td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr className="border-b border-white/5">
-                              <td className="px-6 py-6 text-center text-white/70" colSpan={5}>
-                                집계 0 (선택한 월에 리워드 발생 기업 없음)
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                  {/* 스크롤 처리로 페이징 제거 */}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

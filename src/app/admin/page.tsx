@@ -19,7 +19,7 @@ function LoginForm() {
         setLoading(true);
         setErr(null);   
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
             console.log('Full URL:', `${baseUrl}/admin/login`);
             const res = await axios.post(`${baseUrl}/admin/login`, {adminId, adminPw });
 

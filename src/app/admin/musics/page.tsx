@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 
 const MusicStatsModal = dynamic(() => import('@/components/modals/MusicStatsModal'), { ssr: false })
@@ -53,7 +52,7 @@ export default function MusicsPage() {
       console.log('🔍 Frontend params:', { currentPage, searchQuery, genreFilter, musicTypeFilter })
       
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await apiFetch(`${baseUrl}${url}`)
+      const response = await fetch(`${baseUrl}${url}`)
       console.log('🔍 Frontend response status:', response.status)
       
       const data = await response.json()
@@ -176,11 +175,11 @@ export default function MusicsPage() {
   const executeDelete = async (ids: number[]) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const response = await apiFetch(`${baseUrl}/admin/musics/delete`, {
+      const response = await fetch(`${baseUrl}/admin/musics/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          // Authorization은 apiFetch가 자동 부착
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         },
         body: JSON.stringify({ ids })
       })
@@ -210,7 +209,7 @@ export default function MusicsPage() {
       
       setIsCreateMode(false)
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-      const res = await apiFetch(`${baseUrl}/admin/musics/${id}`)
+      const res = await fetch(`${baseUrl}/admin/musics/${id}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
               const mapped = {
@@ -636,14 +635,27 @@ export default function MusicsPage() {
                                                  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
                                                  const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
                          const data = await res.json()
+                         const tags = Array.isArray(data.tags) ? data.tags.join(',') : (data.tags || '')
+                         const normalizedTags = Array.isArray(data.normalizedTags)
+                           ? data.normalizedTags.join(',')
+                           : (data.normalizedTags ?? (data as any).normalized_tags ?? '')
+                         const rewardPerPlay = (typeof data.rewardPerPlay === 'number'
+                           ? data.rewardPerPlay
+                           : (Number(data.rewardPerPlay) || undefined))
+                         const maxPlayCount = (
+                           typeof data.maxPlayCount === 'number' ? data.maxPlayCount :
+                           typeof data.totalRewardCount === 'number' ? data.totalRewardCount :
+                           typeof (data as any).monthlyLimit === 'number' ? (data as any).monthlyLimit :
+                           typeof (data as any).maxrewardlimit === 'number' ? (data as any).maxrewardlimit : undefined
+                         )
                          setStatsMusicData({
                            id: String(data.id),
                            title: data.title,
                            artist: data.artist,
                            category: data.category,
                            genre: data.category,
-                           tags: data.tags,
-                           normalizedTags: data.normalizedTags,
+                           tags,
+                           normalizedTags,
                            releaseDate: data.releaseDate,
                            durationSec: data.durationSec,
                            musicType: data.musicType,
@@ -657,8 +669,8 @@ export default function MusicsPage() {
                            priceMusicOnly: data.priceMusicOnly,
                            priceLyricsOnly: data.priceLyricsOnly,
                            grade: data.grade,
-                           rewardPerPlay: data.rewardPerPlay,
-                           maxPlayCount: data.maxPlayCount,
+                           rewardPerPlay,
+                           maxPlayCount,
                            accessTier: data.accessTier
                          })
                         setStatsOpen(true)
@@ -732,17 +744,30 @@ export default function MusicsPage() {
                           setStatsTitle(item.title)
                           try {
                             const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-                            const res = await apiFetch(`${baseUrl}/admin/musics/${item.id}`)
+                            const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
                             if (!res.ok) throw new Error(`HTTP ${res.status}`)
                             const data = await res.json()
+                            const tags = Array.isArray(data.tags) ? data.tags.join(',') : (data.tags || '')
+                            const normalizedTags = Array.isArray(data.normalizedTags)
+                              ? data.normalizedTags.join(',')
+                              : (data.normalizedTags ?? (data as any).normalized_tags ?? '')
+                            const rewardPerPlay = (typeof data.rewardPerPlay === 'number'
+                              ? data.rewardPerPlay
+                              : (Number(data.rewardPerPlay) || undefined))
+                            const maxPlayCount = (
+                              typeof data.maxPlayCount === 'number' ? data.maxPlayCount :
+                              typeof data.totalRewardCount === 'number' ? data.totalRewardCount :
+                              typeof (data as any).monthlyLimit === 'number' ? (data as any).monthlyLimit :
+                              typeof (data as any).maxrewardlimit === 'number' ? (data as any).maxrewardlimit : undefined
+                            )
                             setStatsMusicData({
                               id: String(data.id),
                               title: data.title,
                               artist: data.artist,
                               category: data.category,
                               genre: data.category,
-                              tags: data.tags,
-                              normalizedTags: data.normalizedTags,
+                              tags,
+                              normalizedTags,
                               releaseDate: data.releaseDate,
                               durationSec: data.durationSec,
                               musicType: data.musicType,
@@ -756,8 +781,8 @@ export default function MusicsPage() {
                               priceMusicOnly: data.priceMusicOnly,
                               grade: data.grade,
                               priceLyricsOnly: data.priceLyricsOnly,
-                              rewardPerPlay: data.rewardPerPlay,
-                              maxPlayCount: data.maxPlayCount,
+                              rewardPerPlay,
+                              maxPlayCount,
                               accessTier: data.accessTier
                             })
                             setStatsOpen(true)
