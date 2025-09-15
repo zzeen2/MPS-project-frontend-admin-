@@ -34,6 +34,9 @@ export default function MusicsPage() {
   // 드롭다운 열림/닫힘 상태
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   
+  // 카테고리 목록(백엔드에서 로드)
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
+  
 
 
   // API 연동을 위한 상태 변수들
@@ -47,9 +50,9 @@ export default function MusicsPage() {
   const fetchMusics = async () => {
     setLoading(true)
     try {
-      const url = `/admin/musics?page=${currentPage}&limit=10&search=${searchQuery}&category=${genreFilter}&musicType=${musicTypeFilter}`
+      const url = `/admin/musics?page=${currentPage}&limit=10&search=${encodeURIComponent(searchQuery)}&category=${encodeURIComponent(genreFilter)}&musicType=${encodeURIComponent(musicTypeFilter)}&idSortFilter=${encodeURIComponent(idSortFilter)}&releaseDateSortFilter=${encodeURIComponent(releaseDateSortFilter)}&rewardLimitFilter=${encodeURIComponent(rewardLimitFilter)}`
       console.log('🔍 Frontend API URL:', url)
-      console.log('🔍 Frontend params:', { currentPage, searchQuery, genreFilter, musicTypeFilter })
+      console.log('🔍 Frontend params:', { currentPage, searchQuery, genreFilter, musicTypeFilter, idSortFilter, releaseDateSortFilter, rewardLimitFilter })
       
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
       const response = await fetch(`${baseUrl}${url}`)
@@ -72,7 +75,23 @@ export default function MusicsPage() {
   // API 자동 호출을 위한 useEffect
   useEffect(() => {
     fetchMusics()
-  }, [currentPage, searchQuery, genreFilter, musicTypeFilter])
+  }, [currentPage, searchQuery, genreFilter, musicTypeFilter, idSortFilter, releaseDateSortFilter, rewardLimitFilter])
+
+  // 카테고리 목록 로드
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        const res = await fetch(`${baseUrl}/admin/musics/categories`)
+        if (!res.ok) return
+        const data = await res.json()
+        setCategories(Array.isArray(data?.categories) ? data.categories : [])
+      } catch (e) {
+        console.error('카테고리 목록 로드 실패', e)
+      }
+    }
+    loadCategories()
+  }, [])
 
   // 페이지 외부 클릭 시 드롭다운 닫기
   React.useEffect(() => {
@@ -247,6 +266,13 @@ export default function MusicsPage() {
       setEditModalOpen(true)
     } catch (e) {
       console.error('수정 데이터 로드 실패', e)
+    }
+  }
+
+  // 페이지네이션 핸들러 추가
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= Math.ceil(totalCount / 10)) {
+      setCurrentPage(newPage)
     }
   }
 
@@ -430,15 +456,15 @@ export default function MusicsPage() {
                           >
                             전체
                           </button>
-                          {['Pop', 'Rock', 'Jazz', 'Classical'].map((genre) => (
+                          {(categories || []).map((cat) => (
                             <button 
-                              key={genre}
-                              onClick={() => { setGenreFilter(genre); closeDropdown(); }}
+                              key={cat.id}
+                              onClick={() => { setGenreFilter(cat.name); closeDropdown(); }}
                               className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
-                                genreFilter === genre ? 'text-teal-300 bg-white/5' : 'text-white/90 font-medium'
+                                genreFilter === cat.name ? 'text-teal-300 bg-white/5' : 'text-white/90 font-medium'
                               }`}
                             >
-                              {genre}
+                              {cat.name}
                             </button>
                           ))}
                         </div>
@@ -535,268 +561,195 @@ export default function MusicsPage() {
               </tr>
             </thead>
             <tbody>
-              {React.useMemo(() => {
-                // 디버깅: 실제 API 응답 데이터 구조 확인
-                console.log('API 응답 데이터:', musics)
-                
-                // 필터링 + 정렬된 데이터 생성
-                let filteredData = musics
-                  .filter(item => item && item.id && !isNaN(item.id) && item.id > 0) // 유효한 음원만 필터링
-                  .map((item, index) => {
-                    return {
-                      index: index,
-                      id: item.id,                                    // 음원번호
-                      title: item.title,                              // 제목
-                      artist: item.artist,                            // 아티스트
-                      musicType: item.musictype ? 'Inst' : '일반',    // 음원 유형 (musictype 필드 사용)
-                      genre: item.category || '미분류',               // 카테고리 (category 필드 사용)
-                      tags: item.tags || '-',                  // 태그 (tags 필드 사용)
-                      releaseDate: item.releasedate ? new Date(item.releasedate).toLocaleDateString() : '미정', // 발매일 (releasedate 필드 사용)
-                      maxRewardLimit: item.maxrewardlimit && item.maxrewardlimit > 0 ? `${item.maxrewardlimit}토큰` : '-',   // 월 최대 리워드 한도 (maxrewardlimit 필드 사용)
-                    }
-                  })
-                
-                // 필터링
-                filteredData = filteredData.filter(item => {
-                  if (genreFilter !== '전체' && item.genre !== genreFilter) return false
-                  if (musicTypeFilter !== '전체' && item.musicType !== musicTypeFilter) return false
-                  return true
-                })
-                
-                // 기본 정렬: 음원번호 오름차순
-                if (!sortBy && !sortOrder) {
-                  filteredData.sort((a, b) => a.id - b.id)
-                }
-                // 드롭다운 정렬 필터 적용
-                else if (idSortFilter === '오름차순') {
-                  filteredData.sort((a, b) => a.id - b.id)
-                } else if (idSortFilter === '내림차순') {
-                  filteredData.sort((a, b) => b.id - a.id)
-                } else if (releaseDateSortFilter === '오름차순') {
-                  filteredData.sort((a, b) => {
-                    const dateA = a.releaseDate === '미정' ? new Date(0) : new Date(a.releaseDate)
-                    const dateB = b.releaseDate === '미정' ? new Date(0) : new Date(b.releaseDate)
-                    return dateA.getTime() - dateB.getTime()
-                  })
-                } else if (releaseDateSortFilter === '내림차순') {
-                  filteredData.sort((a, b) => {
-                    const dateA = a.releaseDate === '미정' ? new Date(0) : new Date(a.releaseDate)
-                    const dateB = b.releaseDate === '미정' ? new Date(0) : new Date(b.releaseDate)
-                    return dateB.getTime() - dateA.getTime()
-                  })
-                } else if (rewardLimitFilter === '오름차순') {
-                  filteredData.sort((a, b) => {
-                    const limitA = parseInt(a.maxRewardLimit) || 0
-                    const limitB = parseInt(b.maxRewardLimit) || 0
-                    return limitA - limitB
-                  })
-                } else if (rewardLimitFilter === '내림차순') {
-                  filteredData.sort((a, b) => {
-                    const limitA = parseInt(a.maxRewardLimit) || 0
-                    const limitB = parseInt(b.maxRewardLimit) || 0
-                    return limitB - limitA
-                  })
-                }
-                // 드롭다운이 '전체'일 때 기본 정렬 (음원번호 오름차순)
-                else if (idSortFilter === '전체' && releaseDateSortFilter === '전체' && rewardLimitFilter === '전체') {
-                  filteredData.sort((a, b) => a.id - b.id)
-                }
-                // 사용자 정렬 (기존 로직)
-                else if (sortBy && sortOrder) {
-                  filteredData.sort((a, b) => {
-                    let aVal = a[sortBy as keyof typeof a]
-                    let bVal = b[sortBy as keyof typeof b]
-                    
-                    if (typeof aVal === 'string' && typeof bVal === 'string') {
-                      return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
-                    }
-                    if (typeof aVal === 'number' && typeof bVal === 'number') {
-                      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
-                    }
-                    return 0
-                  })
-                }
-                // 모든 조건에 해당하지 않으면 기본 정렬
-                else {
-                  filteredData.sort((a, b) => a.id - b.id)
+              {musics.map((item, index) => {
+                // API에서 받은 데이터를 그대로 사용 (필터링/정렬 제거)
+                const musicData = {
+                  index: index,
+                  id: item.id,                                    // 음원번호
+                  title: item.title,                              // 제목
+                  artist: item.artist,                            // 아티스트
+                  musicType: item.musictype ? 'Inst' : '일반',    // 음원 유형 (musictype 필드 사용)
+                  genre: item.category || '미분류',               // 카테고리 (category 필드 사용)
+                  tags: item.tags || '-',                  // 태그 (tags 필드 사용)
+                  releaseDate: item.releasedate ? new Date(item.releasedate).toLocaleDateString() : '미정', // 발매일 (releasedate 필드 사용)
+                  maxRewardLimit: item.maxrewardlimit && item.maxrewardlimit > 0 ? `${item.maxrewardlimit}토큰` : '-',   // 월 최대 리워드 한도 (maxrewardlimit 필드 사용)
                 }
                 
-                return filteredData
-              }, [genreFilter, musicTypeFilter, sortBy, sortOrder, idSortFilter, releaseDateSortFilter, rewardLimitFilter, musics]).filter(item => item && item.id && !isNaN(item.id) && item.id > 0).map((item) => {
                 return (
                   <tr 
-                    key={item.index} 
+                    key={musicData.index} 
                     className={`border-b border-white/5 transition-all duration-200 cursor-pointer ${
-                      item.index % 2 === 0 ? 'bg-white/2' : 'bg-white/1'
+                      musicData.index % 2 === 0 ? 'bg-white/2' : 'bg-white/1'
                     } hover:bg-white/8`}
                     onClick={async () => {
-                      setStatsTitle(item.title)
+                      setStatsTitle(musicData.title)
                       try {
-                                                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-                                                 const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
-                         const data = await res.json()
-                         const tags = Array.isArray(data.tags) ? data.tags.join(',') : (data.tags || '')
-                         const normalizedTags = Array.isArray(data.normalizedTags)
-                           ? data.normalizedTags.join(',')
-                           : (data.normalizedTags ?? (data as any).normalized_tags ?? '')
-                         const rewardPerPlay = (typeof data.rewardPerPlay === 'number'
-                           ? data.rewardPerPlay
-                           : (Number(data.rewardPerPlay) || undefined))
-                         const maxPlayCount = (
-                           typeof data.maxPlayCount === 'number' ? data.maxPlayCount :
-                           typeof data.totalRewardCount === 'number' ? data.totalRewardCount :
-                           typeof (data as any).monthlyLimit === 'number' ? (data as any).monthlyLimit :
-                           typeof (data as any).maxrewardlimit === 'number' ? (data as any).maxrewardlimit : undefined
-                         )
-                         setStatsMusicData({
-                           id: String(data.id),
-                           title: data.title,
-                           artist: data.artist,
-                           category: data.category,
-                           genre: data.category,
-                           tags,
-                           normalizedTags,
-                           releaseDate: data.releaseDate,
-                           durationSec: data.durationSec,
-                           musicType: data.musicType,
-                           isrc: data.isrc,
-                           createdAt: data.createdAt,
-                           lyricsText: data.lyricsText,
-                           lyricsFilePath: data.lyricsFilePath,
-                           lyricist: data.lyricist,
-                           composer: data.composer,
-                           arranger: data.arranger,
-                           priceMusicOnly: data.priceMusicOnly,
-                           priceLyricsOnly: data.priceLyricsOnly,
-                           grade: data.grade,
-                           rewardPerPlay,
-                           maxPlayCount,
-                           accessTier: data.accessTier
-                         })
+                        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+                        const res = await fetch(`${baseUrl}/admin/musics/${musicData.id}`)
+                        const data = await res.json()
+                        const tags = Array.isArray(data.tags) ? data.tags.join(',') : (data.tags || '')
+                        const normalizedTags = Array.isArray(data.normalizedTags)
+                          ? data.normalizedTags.join(',')
+                          : (data.normalizedTags ?? (data as any).normalized_tags ?? '')
+                        const rewardPerPlay = (typeof data.rewardPerPlay === 'number'
+                          ? data.rewardPerPlay
+                          : (Number(data.rewardPerPlay) || undefined))
+                        const maxPlayCount = (
+                          typeof data.maxPlayCount === 'number' ? data.maxPlayCount :
+                          typeof data.totalRewardCount === 'number' ? data.totalRewardCount :
+                          typeof (data as any).monthlyLimit === 'number' ? (data as any).monthlyLimit :
+                          typeof (data as any).maxrewardlimit === 'number' ? (data as any).maxrewardlimit : undefined
+                        )
+                        setStatsMusicData({
+                          id: String(data.id),
+                          title: data.title,
+                          artist: data.artist,
+                          category: data.category,
+                          genre: data.category,
+                          tags,
+                          normalizedTags,
+                          releaseDate: data.releaseDate,
+                          durationSec: data.durationSec,
+                          musicType: data.musicType,
+                          isrc: data.isrc,
+                          createdAt: data.createdAt,
+                          lyricsText: data.lyricsText,
+                          lyricsFilePath: data.lyricsFilePath,
+                          lyricist: data.lyricist,
+                          composer: data.composer,
+                          arranger: data.arranger,
+                          priceMusicOnly: data.priceMusicOnly,
+                          priceLyricsOnly: data.priceLyricsOnly,
+                          grade: data.grade,
+                          rewardPerPlay,
+                          maxPlayCount,
+                          accessTier: data.accessTier
+                        })
                         setStatsOpen(true)
                       } catch (e) {
                         console.error('상세 조회 실패', e)
                       }
                     }}
                   >
-                  <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                    <div onClick={(e) => e.stopPropagation()}>
-                    <input 
-                      type="checkbox" 
-                          checked={selectedItems.has(typeof item.id === 'string' ? parseInt(item.id) : item.id)}
-                                                  onChange={(e) => {
-                          e.stopPropagation()
-                          handleItemSelect(item.id)
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                        }}
-                      className="accent-teal-400 rounded" 
-                    />
-                    </div>
-                  </td>
+                    <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedItems.has(typeof musicData.id === 'string' ? parseInt(musicData.id) : musicData.id)}
+                          onChange={(e) => {
+                            e.stopPropagation()
+                            handleItemSelect(musicData.id)
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                          }}
+                          className="accent-teal-400 rounded" 
+                        />
+                      </div>
+                    </td>
 
-                  <td className="px-6 py-4 text-center">
-                    <div className="font-semibold text-white">{item.id}</div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="font-semibold text-white">{item.title}</div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="text-white/90 font-medium">{item.artist}</div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
-                      item.musicType === 'Inst' 
-                        ? 'bg-blue-500/20 text-blue-400' 
-                        : 'bg-purple-500/20 text-purple-400'
-                    }`}>
-                      {item.musicType}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
-                      {item.genre}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-white/90 font-medium text-center">{item.tags}</td>
-                  <td className="px-6 py-4 text-white/90 font-medium text-center">{item.releaseDate}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-teal-400 font-medium">
-                      {item.maxRewardLimit}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex gap-2 justify-center">
-                      <button 
-                        className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-3 py-1.5 text-xs text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEdit(item.id)
-                        }}
-                      >
-                        수정
-                      </button>
-                      <button 
-                        className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-3 py-1.5 text-xs text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200" 
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          setStatsTitle(item.title)
-                          try {
-                            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-                            const res = await fetch(`${baseUrl}/admin/musics/${item.id}`)
-                            if (!res.ok) throw new Error(`HTTP ${res.status}`)
-                            const data = await res.json()
-                            const tags = Array.isArray(data.tags) ? data.tags.join(',') : (data.tags || '')
-                            const normalizedTags = Array.isArray(data.normalizedTags)
-                              ? data.normalizedTags.join(',')
-                              : (data.normalizedTags ?? (data as any).normalized_tags ?? '')
-                            const rewardPerPlay = (typeof data.rewardPerPlay === 'number'
-                              ? data.rewardPerPlay
-                              : (Number(data.rewardPerPlay) || undefined))
-                            const maxPlayCount = (
-                              typeof data.maxPlayCount === 'number' ? data.maxPlayCount :
-                              typeof data.totalRewardCount === 'number' ? data.totalRewardCount :
-                              typeof (data as any).monthlyLimit === 'number' ? (data as any).monthlyLimit :
-                              typeof (data as any).maxrewardlimit === 'number' ? (data as any).maxrewardlimit : undefined
-                            )
-                            setStatsMusicData({
-                              id: String(data.id),
-                              title: data.title,
-                              artist: data.artist,
-                              category: data.category,
-                              genre: data.category,
-                              tags,
-                              normalizedTags,
-                              releaseDate: data.releaseDate,
-                              durationSec: data.durationSec,
-                              musicType: data.musicType,
-                              isrc: data.isrc,
-                              createdAt: data.createdAt,
-                              lyricsText: data.lyricsText,
-                              lyricsFilePath: data.lyricsFilePath,
-                              lyricist: data.lyricist,
-                              composer: data.composer,
-                              arranger: data.arranger,
-                              priceMusicOnly: data.priceMusicOnly,
-                              grade: data.grade,
-                              priceLyricsOnly: data.priceLyricsOnly,
-                              rewardPerPlay,
-                              maxPlayCount,
-                              accessTier: data.accessTier
-                            })
-                            setStatsOpen(true)
-                          } catch (err) {
-                            console.error('상세 조회 실패', err)
-                          }
-                        }}
-                      >
-                        상세
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )})}
+                    <td className="px-6 py-4 text-center">
+                      <div className="font-semibold text-white">{musicData.id}</div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="font-semibold text-white">{musicData.title}</div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="text-white/90 font-medium">{musicData.artist}</div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+                        musicData.musicType === 'Inst' 
+                          ? 'bg-blue-500/20 text-blue-400' 
+                          : 'bg-purple-500/20 text-purple-400'
+                      }`}>
+                        {musicData.musicType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
+                        {musicData.genre}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-white/90 font-medium text-center">{musicData.tags}</td>
+                    <td className="px-6 py-4 text-white/90 font-medium text-center">{musicData.releaseDate}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-teal-400 font-medium">
+                        {musicData.maxRewardLimit}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex gap-2 justify-center">
+                        <button 
+                          className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-3 py-1.5 text-xs text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEdit(musicData.id)
+                          }}
+                        >
+                          수정
+                        </button>
+                        <button 
+                          className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 px-3 py-1.5 text-xs text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200" 
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            setStatsTitle(musicData.title)
+                            try {
+                              const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+                              const res = await fetch(`${baseUrl}/admin/musics/${musicData.id}`)
+                              if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                              const data = await res.json()
+                              const tags = Array.isArray(data.tags) ? data.tags.join(',') : (data.tags || '')
+                              const normalizedTags = Array.isArray(data.normalizedTags)
+                                ? data.normalizedTags.join(',')
+                                : (data.normalizedTags ?? (data as any).normalized_tags ?? '')
+                              const rewardPerPlay = (typeof data.rewardPerPlay === 'number'
+                                ? data.rewardPerPlay
+                                : (Number(data.rewardPerPlay) || undefined))
+                              const maxPlayCount = (
+                                typeof data.maxPlayCount === 'number' ? data.maxPlayCount :
+                                typeof data.totalRewardCount === 'number' ? data.totalRewardCount :
+                                typeof (data as any).monthlyLimit === 'number' ? (data as any).monthlyLimit :
+                                typeof (data as any).maxrewardlimit === 'number' ? (data as any).maxrewardlimit : undefined
+                              )
+                              setStatsMusicData({
+                                id: String(data.id),
+                                title: data.title,
+                                artist: data.artist,
+                                category: data.category,
+                                genre: data.category,
+                                tags,
+                                normalizedTags,
+                                releaseDate: data.releaseDate,
+                                durationSec: data.durationSec,
+                                musicType: data.musicType,
+                                isrc: data.isrc,
+                                createdAt: data.createdAt,
+                                lyricsText: data.lyricsText,
+                                lyricsFilePath: data.lyricsFilePath,
+                                lyricist: data.lyricist,
+                                composer: data.composer,
+                                arranger: data.arranger,
+                                priceMusicOnly: data.priceMusicOnly,
+                                grade: data.grade,
+                                priceLyricsOnly: data.priceLyricsOnly,
+                                rewardPerPlay,
+                                maxPlayCount,
+                                accessTier: data.accessTier
+                              })
+                              setStatsOpen(true)
+                            } catch (err) {
+                              console.error('상세 조회 실패', err)
+                            }
+                          }}
+                        >
+                          상세
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -805,23 +758,66 @@ export default function MusicsPage() {
       {/* 페이지네이션 */}
       <div className="sticky bottom-0 flex items-center justify-center text-sm text-white/70 mt-8 bg-neutral-950 py-4 border-t border-white/10">
         <div className="flex items-center gap-3">
-          <button className="rounded-lg border border-white/10 bg-white/5 p-2.5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+          {/* 첫 페이지로 */}
+          <button 
+            onClick={() => handlePageChange(1)}
+            disabled={currentPage === 1}
+            className={`rounded-lg border border-white/10 p-2.5 transition-all duration-200 hover:border-white/20 ${
+              currentPage === 1 
+                ? 'bg-white/5 text-white/30 cursor-not-allowed' 
+                : 'bg-white/5 hover:bg-white/10'
+            }`}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>
           </button>
-          <button className="rounded-lg border border-white/10 bg-white/5 p-2.5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+          
+          {/* 이전 페이지 */}
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`rounded-lg border border-white/10 p-2.5 transition-all duration-200 hover:border-white/20 ${
+              currentPage === 1 
+                ? 'bg-white/5 text-white/30 cursor-not-allowed' 
+                : 'bg-white/5 hover:bg-white/10'
+            }`}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="px-5 py-2.5 bg-gradient-to-r from-white/8 to-white/5 rounded-lg border border-white/10 font-medium">{currentPage} / {Math.max(Math.ceil(totalCount / 10), 1)}</span>
-          <button className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 p-2.5 text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200">
+          
+          {/* 현재 페이지 / 총 페이지 */}
+          <span className="px-5 py-2.5 bg-gradient-to-r from-white/8 to-white/5 rounded-lg border border-white/10 font-medium">
+            {currentPage} / {Math.max(Math.ceil(totalCount / 10), 1)}
+          </span>
+          
+          {/* 다음 페이지 */}
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= Math.ceil(totalCount / 10)}
+            className={`rounded-lg p-2.5 font-medium transition-all duration-200 ${
+              currentPage >= Math.ceil(totalCount / 10)
+                ? 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10'
+                : 'bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700'
+            }`}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          <button className="rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 p-2.5 text-white font-medium hover:from-teal-600 hover:to-teal-700 transition-all duration-200">
+          
+          {/* 마지막 페이지로 */}
+          <button 
+            onClick={() => handlePageChange(Math.ceil(totalCount / 10))}
+            disabled={currentPage >= Math.ceil(totalCount / 10)}
+            className={`rounded-lg p-2.5 font-medium transition-all duration-200 ${
+              currentPage >= Math.ceil(totalCount / 10)
+                ? 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10'
+                : 'bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700'
+            }`}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7" />
             </svg>
@@ -840,6 +836,11 @@ export default function MusicsPage() {
             setEditModalOpen(false)
             setIsCreateMode(false)
           }} 
+          onSuccess={() => {
+            setEditModalOpen(false)
+            setIsCreateMode(false)
+            fetchMusics() // 목록 새로고침
+          }}
           musicData={editMusicData}
           isCreateMode={isCreateMode}
           key={isCreateMode ? 'create' : String(editMusicData?.id ?? 'edit')}

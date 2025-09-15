@@ -64,14 +64,14 @@ export default function DashboardPage() {
     })
 
     newSocket.on('connect', () => {
-      console.log('✅ WebSocket 연결됨')
+      console.log('웹소켓 연결됨')
       setIsConnected(true)
       // 연결 시 실시간 데이터 구독
       newSocket.emit('subscribe-realtime')
     })
 
     newSocket.on('disconnect', () => {
-      console.log('❌ WebSocket 연결 해제됨')
+      console.log('웹소켓 연결 해제됨')
       setIsConnected(false)
     })
 
@@ -83,7 +83,9 @@ export default function DashboardPage() {
       const parsed = (data.apiCalls || []).map((item: any) => {
         const endpoint: string = item.endpoint || ''
         const m = endpoint.match(/musics\/(\d+)/)
-        const mid = m ? Number(m[1]) : undefined
+        const midFromEndpoint = m ? Number(m[1]) : undefined
+        const midFromPayload = (item.musicId ?? item.music_id) !== undefined ? Number(item.musicId ?? item.music_id) : undefined
+        const mid = midFromPayload ?? midFromEndpoint
         return {
           id: item.id || Math.random(),
           status: item.status || 'error',
@@ -206,7 +208,9 @@ export default function DashboardPage() {
             const items = (apiData.items || []).map((item: any) => {
               const endpoint = item.endpoint || '/api/unknown'
               const m = (endpoint as string).match(/musics\/(\d+)/)
-              const mid = m ? Number(m[1]) : undefined
+              const midFromEndpoint = m ? Number(m[1]) : undefined
+              const midFromPayload = (item.musicId ?? item.music_id) !== undefined ? Number(item.musicId ?? item.music_id) : undefined
+              const mid = midFromPayload ?? midFromEndpoint
               return ({
                 id: item.id || Math.random(),
                 status: item.status || 'error',
@@ -259,6 +263,36 @@ export default function DashboardPage() {
 
     return () => clearInterval(interval)
   }, [isConnected]) // isConnected 상태 변경 시 재실행
+
+  // 음원 제목 보강: payload에 제목이 없고 musicId만 있을 때 서버에서 조회해 메모리에 캐시
+  useEffect(() => {
+    const fetchMissingTitles = async () => {
+      try {
+        const ids = Array.from(new Set(
+          (realtimeApiStatus || [])
+            .map(i => i.musicId)
+            .filter((v): v is number => typeof v === 'number' && v > 0)
+        ))
+        const missing = ids.filter(id => !musicTitleById[id])
+        if (missing.length === 0) return
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        const results = await Promise.allSettled(
+          missing.map(id => fetch(`${baseUrl}/admin/musics/${id}`).then(r => r.ok ? r.json() : null))
+        )
+        const next: Record<number, string> = { ...musicTitleById }
+        results.forEach((res, idx) => {
+          const id = missing[idx]
+          if (res.status === 'fulfilled' && res.value && res.value.title) {
+            next[id] = res.value.title
+          }
+        })
+        setMusicTitleById(next)
+      } catch (e) {
+        // ignore
+      }
+    }
+    fetchMissingTitles()
+  }, [realtimeApiStatus])
 
   const formatKST = (ts: string) => {
     try {
@@ -419,8 +453,8 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="py-2 px-3 text-white/80 text-center max-w-[260px]">
-                          <span title={item.musicTitle || ''} className="inline-block truncate align-top max-w-[240px]">
-                            {item.musicTitle || (item.musicId ? `#${item.musicId}` : '-')}
+                          <span title={item.musicTitle || (item.musicId ? (musicTitleById[item.musicId] || `#${item.musicId}`) : '')} className="inline-block truncate align-top max-w-[240px]">
+                            {item.musicTitle || (item.musicId ? (musicTitleById[item.musicId] || `#${item.musicId}`) : '-')}
                           </span>
                         </td>
                         <td className="py-2 px-3 text-white/60 text-center">{item.company}</td>

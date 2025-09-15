@@ -305,15 +305,15 @@ export default function MusicStatsModal({ open, onClose, title = '음원 상세'
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <span className="text-white/60 text-sm">작사</span>
-                <div className="text-white font-medium">{musicData?.lyricist || '-'}</div>
+                <div className="text-white/80 text-sm">{musicData?.lyricist || '-'}</div>
               </div>
               <div>
                 <span className="text-white/60 text-sm">작곡</span>
-                <div className="text-white font-medium">{musicData?.composer || '-'}</div>
+                <div className="text-white/80 text-sm">{musicData?.composer || '-'}</div>
               </div>
               <div>
                 <span className="text-white/60 text-sm">편곡</span>
-                <div className="text-white font-medium">{musicData?.arranger || '-'}</div>
+                <div className="text-white/80 text-sm">{musicData?.arranger || '-'}</div>
               </div>
             </div>
           </div>

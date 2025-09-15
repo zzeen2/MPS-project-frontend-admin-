@@ -84,7 +84,7 @@ export default function RewardsMusicsPage() {
 
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 20
+  const itemsPerPage = 10
 
   const fetchRows = async () => {
     try {
@@ -106,7 +106,7 @@ export default function RewardsMusicsPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setRows(data.items || [])
-      setTotal(data.total || 0)
+      setTotal(data.totalCount || data.total || 0)
       if (!yearMonth && data.yearMonth) setYearMonth(data.yearMonth)
     } catch (e: any) {
       setError(e.message || '조회 실패')
@@ -119,7 +119,7 @@ export default function RewardsMusicsPage() {
   useEffect(() => {
     fetchRows()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, sortBy, sortOrder, musicTypeFilter])
+  }, [currentPage, sortBy, sortOrder, musicTypeFilter, searchTerm, categoryFilter, limitFilter, usageFilter, companyFilter, rewardFilter, idFilter])
 
   const handleSearch = () => {
     setCurrentPage(1)
@@ -176,17 +176,13 @@ export default function RewardsMusicsPage() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
-  // 검색어나 필터 변경 시 페이지 리셋
-  React.useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, statusFilter, categoryFilter, limitFilter, usageFilter, companyFilter, rewardFilter])
+  // 검색어나 필터 변경 시 페이지 리셋은 useEffect에서 처리됨
 
+  // 클라이언트 사이드 필터링 제거 - 백엔드에서 처리
   const filteredMusics = rows
 
   // 페이지네이션 계산
   const totalPages = Math.max(Math.ceil(total / itemsPerPage), 1)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
   const currentMusics = filteredMusics
 
   // 페이지 변경 함수

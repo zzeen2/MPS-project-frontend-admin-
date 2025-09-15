@@ -216,57 +216,12 @@ export default function CompanyRewardsPage() {
     // } // Removed dummy data
   }, [companies.length, loading])
 
-  const filteredCompanies = React.useMemo(() => {
-    let filteredData = [...companies]
-    
-    // 기업 ID 정렬 (음원목록과 동일한 로직)
-    if (sortBy === 'company_id' && sortOrder === 'asc') {
-      filteredData.sort((a, b) => Number(a.id) - Number(b.id))
-    } else if (sortBy === 'company_id' && sortOrder === 'desc') {
-      filteredData.sort((a, b) => Number(b.id) - Number(a.id))
-    }
-    
-    // 보유토큰 정렬
-    else if (sortBy === 'total_tokens' && sortOrder === 'asc') {
-      filteredData.sort((a, b) => a.totalTokens - b.totalTokens)
-    } else if (sortBy === 'total_tokens' && sortOrder === 'desc') {
-      filteredData.sort((a, b) => b.totalTokens - a.totalTokens)
-    }
-    
-    // 이번 달 적립 정렬
-    else if (sortBy === 'monthly_earned' && sortOrder === 'asc') {
-      filteredData.sort((a, b) => a.monthlyEarned - b.monthlyEarned)
-    } else if (sortBy === 'monthly_earned' && sortOrder === 'desc') {
-      filteredData.sort((a, b) => b.monthlyEarned - a.monthlyEarned)
-    }
-    
-    // 이번 달 사용 정렬
-    else if (sortBy === 'monthly_used' && sortOrder === 'asc') {
-      filteredData.sort((a, b) => a.monthlyUsed - b.monthlyUsed)
-    } else if (sortBy === 'monthly_used' && sortOrder === 'desc') {
-      filteredData.sort((a, b) => b.monthlyUsed - a.monthlyUsed)
-    }
-    
-    // 사용률 정렬
-    else if (sortBy === 'usage_rate' && sortOrder === 'asc') {
-      filteredData.sort((a, b) => a.usageRate - b.usageRate)
-    } else if (sortBy === 'usage_rate' && sortOrder === 'desc') {
-      filteredData.sort((a, b) => b.usageRate - a.usageRate)
-    }
-    
-    // 사용중 음원 정렬
-    else if (sortBy === 'active_tracks' && sortOrder === 'asc') {
-      filteredData.sort((a, b) => a.activeTracks - b.activeTracks)
-    } else if (sortBy === 'active_tracks' && sortOrder === 'desc') {
-      filteredData.sort((a, b) => b.activeTracks - a.activeTracks)
-    }
-    
-    return filteredData
-  }, [companies, sortBy, sortOrder])
+  // 클라이언트 사이드 필터링 제거 - 백엔드에서 처리
+  const filteredCompanies = companies
   // 총 페이지는 서버 total 기준
   const totalPages = Math.max(Math.ceil(totalCount / itemsPerPage), 1)
 
-  // 페이지 변경 시 현재 페이지를 1로 리셋
+  // 필터 변경 시 현재 페이지를 1로 리셋하고 데이터 다시 가져오기
   React.useEffect(() => {
     setCurrentPage(1)
   }, [searchTerm, selectedTier, tierFilter, tokensFilter, earnedFilter, usedFilter, usageRateFilter, sortBy, sortOrder])

@@ -1126,17 +1126,8 @@ export default function MusicEditModal({ open, onClose, isCreateMode = false, mu
                 ? 'bg-teal-500 text-white' 
                 : 'bg-red-500 text-white'
             }`}>
-              <div className="flex items-center gap-3">
-                <span className="text-xl">
-                  {toastType === 'success' ? '✅' : '❌'}
-                </span>
+              <div className="flex items-center justify-center">
                 <span className="font-medium text-lg">{toastMessage}</span>
-                <button 
-                  onClick={() => setShowToast(false)}
-                  className="ml-3 text-white/80 hover:text-white transition-colors text-lg"
-                >
-                  ✕
-                </button>
               </div>
             </div>
           </div>
