@@ -57,7 +57,15 @@ export default function DashboardPage() {
   // WebSocket 연결
   useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-    const wsUrl = baseUrl.replace(/^https?:\/\//, 'wss://').replace(/^http:\/\//, 'ws://')
+    // HTTP/HTTPS를 WebSocket 프로토콜로 변환
+    let wsUrl = baseUrl
+    console.log('🔍 baseUrl:', baseUrl)
+    if (baseUrl.startsWith('https://')) {
+      wsUrl = baseUrl.replace('https://', 'wss://')
+    } else if (baseUrl.startsWith('http://')) {
+      wsUrl = baseUrl.replace('http://', 'ws://')
+    }
+    console.log('🔍 WebSocket URL:', wsUrl)
     const newSocket = io(wsUrl, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
