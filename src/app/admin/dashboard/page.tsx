@@ -53,6 +53,48 @@ export default function DashboardPage() {
   }>>([])
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [httpPollingInterval, setHttpPollingInterval] = useState<NodeJS.Timeout | null>(null)
+
+  // HTTP 폴링으로 실시간 데이터 가져오기 (WebSocket fallback)
+  const startHttpPolling = () => {
+    if (httpPollingInterval) return // 이미 실행 중이면 중복 실행 방지
+    
+    console.log('🔄 HTTP 폴링 시작 (WebSocket fallback)')
+    const interval = setInterval(async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+        const response = await fetch(`${baseUrl}/admin/dashboard/realtime`)
+        if (response.ok) {
+          const data = await response.json()
+          // WebSocket과 동일한 데이터 처리 로직 적용
+          const parsed = (data.apiCalls || []).map((item: any) => {
+            const endpoint: string = item.endpoint || ''
+            const m = endpoint.match(/musics\/(\d+)/)
+            const midFromEndpoint = m ? Number(m[1]) : undefined
+            const midFromPayload = (item.musicId ?? item.music_id) !== undefined ? Number(item.musicId ?? item.music_id) : undefined
+            const mid = midFromPayload ?? midFromEndpoint
+            return {
+              id: item.id || Math.random(),
+              status: item.status || 'error',
+              endpoint,
+              callType: item.callType || (endpoint.includes('lyrics') ? '가사 호출' : '음원 호출'),
+              validity: item.validity || '유효재생',
+              company: item.company || 'Unknown',
+              timestamp: item.timestamp || new Date().toISOString(),
+              musicTitle: item.musicTitle || item.music_title || item.trackTitle || item.title || undefined,
+              musicId: mid,
+            }
+          })
+          setRealtimeApiStatus(parsed)
+          setRealtimeTopTracks(data.topTracks || [])
+        }
+      } catch (error) {
+        console.error('HTTP 폴링 에러:', error)
+      }
+    }, 5000) // 5초마다 폴링
+    
+    setHttpPollingInterval(interval)
+  }
 
   // WebSocket 연결
   useEffect(() => {
@@ -67,9 +109,13 @@ export default function DashboardPage() {
     }
     console.log('🔍 WebSocket URL:', wsUrl)
     const newSocket = io(wsUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // polling을 먼저 시도
       timeout: 20000,
-      forceNew: true
+      forceNew: true,
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     })
 
     newSocket.on('connect', () => {
@@ -82,6 +128,13 @@ export default function DashboardPage() {
     newSocket.on('disconnect', () => {
       console.log('웹소켓 연결 해제됨')
       setIsConnected(false)
+    })
+
+    newSocket.on('connect_error', (error) => {
+      console.error('WebSocket 연결 에러:', error)
+      setIsConnected(false)
+      // WebSocket 연결 실패 시 HTTP 폴링으로 fallback
+      startHttpPolling()
     })
 
     newSocket.on('realtime-update', (data) => {
@@ -145,6 +198,11 @@ export default function DashboardPage() {
 
     return () => {
       newSocket.close()
+      // HTTP 폴링도 정리
+      if (httpPollingInterval) {
+        clearInterval(httpPollingInterval)
+        setHttpPollingInterval(null)
+      }
     }
   }, [])
 
