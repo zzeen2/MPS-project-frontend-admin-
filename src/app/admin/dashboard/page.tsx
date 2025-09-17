@@ -59,7 +59,6 @@ export default function DashboardPage() {
   const startHttpPolling = () => {
     if (httpPollingInterval) return // 이미 실행 중이면 중복 실행 방지
     
-    console.log('🔄 HTTP 폴링 시작 (WebSocket fallback)')
     const interval = setInterval(async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
@@ -88,9 +87,9 @@ export default function DashboardPage() {
           setRealtimeApiStatus(parsed)
           setRealtimeTopTracks(data.topTracks || [])
         }
-      } catch (error) {
-        console.error('HTTP 폴링 에러:', error)
-      }
+        } catch (error) {
+          // HTTP 폴링 에러 무시
+        }
     }, 5000) // 5초마다 폴링
     
     setHttpPollingInterval(interval)
@@ -101,13 +100,11 @@ export default function DashboardPage() {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
     // HTTP/HTTPS를 WebSocket 프로토콜로 변환
     let wsUrl = baseUrl
-    console.log('🔍 baseUrl:', baseUrl)
     if (baseUrl.startsWith('https://')) {
       wsUrl = baseUrl.replace('https://', 'wss://')
     } else if (baseUrl.startsWith('http://')) {
       wsUrl = baseUrl.replace('http://', 'ws://')
     }
-    console.log('🔍 WebSocket URL:', wsUrl)
     const newSocket = io(wsUrl, {
       transports: ['polling', 'websocket'], // polling을 먼저 시도
       timeout: 20000,
@@ -119,28 +116,22 @@ export default function DashboardPage() {
     })
 
     newSocket.on('connect', () => {
-      console.log('웹소켓 연결됨')
       setIsConnected(true)
       // 연결 시 실시간 데이터 구독
       newSocket.emit('subscribe-realtime')
     })
 
     newSocket.on('disconnect', () => {
-      console.log('웹소켓 연결 해제됨')
       setIsConnected(false)
     })
 
     newSocket.on('connect_error', (error) => {
-      console.error('WebSocket 연결 에러:', error)
       setIsConnected(false)
       // WebSocket 연결 실패 시 HTTP 폴링으로 fallback
       startHttpPolling()
     })
 
     newSocket.on('realtime-update', (data) => {
-      console.log('🔍 WebSocket 실시간 데이터 업데이트:', data)
-      console.log('🔍 WebSocket apiCalls length:', data.apiCalls?.length || 0)
-      console.log('🔍 WebSocket topTracks length:', data.topTracks?.length || 0)
 
       const parsed = (data.apiCalls || []).map((item: any) => {
         const endpoint: string = item.endpoint || ''
@@ -224,12 +215,6 @@ export default function DashboardPage() {
         setHourlyLoading(true)
         setHourlyError(null)
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-        console.log('🔍 Environment check:', {
-          NODE_ENV: process.env.NODE_ENV,
-          NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
-          baseUrl: baseUrl,
-          fullUrl: `${baseUrl}/admin/companies/stats/hourly-plays`
-        })
         const res = await fetch(`${baseUrl}/admin/companies/stats/hourly-plays`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const j = await res.json()
@@ -254,7 +239,6 @@ export default function DashboardPage() {
       // WebSocket이 연결되지 않은 경우에만 HTTP API 사용
       if (!isConnected) {
         try {
-          console.log('⚠️ WebSocket 연결되지 않음, HTTP API로 실시간 데이터 조회...')
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
           
           const [apiRes, tracksRes] = await Promise.all([
@@ -262,15 +246,9 @@ export default function DashboardPage() {
             fetch(`${baseUrl}/admin/musics/realtime/top-tracks`)
           ])
           
-          console.log('API responses:', {
-            apiStatus: apiRes.status,
-            topTracks: tracksRes.status
-          })
           
           if (apiRes.ok) {
             const apiData = await apiRes.json()
-            console.log('🔍 API Status Data:', apiData)
-            console.log('🔍 API Status items length:', apiData.items?.length || 0)
             // HTTP API 응답 구조에 맞게 수정 + musicId 파싱
             const items = (apiData.items || []).map((item: any) => {
               const endpoint = item.endpoint || '/api/unknown'
@@ -298,22 +276,17 @@ export default function DashboardPage() {
                 }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
               })
             })
-            console.log('🔍 Processed API Status items:', items)
             setRealtimeApiStatus(items)
           } else {
-            console.error('❌ API Status failed:', apiRes.status, await apiRes.text())
           }
           
           if (tracksRes.ok) {
             const tracksData = await tracksRes.json()
-            console.log('Top Tracks Data:', tracksData)
             setRealtimeTopTracks(tracksData.items || [])
           } else {
-            console.error('Top Tracks failed:', tracksRes.status)
           }
           
         } catch (e) {
-          console.error('실시간 데이터 조회 실패:', e)
         }
       }
     }
