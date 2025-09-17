@@ -53,6 +53,7 @@ export default function DashboardPage() {
   }>>([])
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [httpPollingInterval, setHttpPollingInterval] = useState<NodeJS.Timeout | null>(null)
 
   // WebSocket 연결
   useEffect(() => {
@@ -142,6 +143,10 @@ export default function DashboardPage() {
 
     return () => {
       newSocket.close()
+      if (httpPollingInterval) {
+        clearInterval(httpPollingInterval)
+        setHttpPollingInterval(null)
+      }
     }
   }, [])
 
@@ -163,7 +168,7 @@ export default function DashboardPage() {
       try {
         setHourlyLoading(true)
         setHourlyError(null)
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
         console.log('🔍 Environment check:', {
           NODE_ENV: process.env.NODE_ENV,
           NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -189,6 +194,51 @@ export default function DashboardPage() {
       }
     }
 
+
+    const startHttpPolling = () => {
+      if (httpPollingInterval) return
+      const interval = setInterval(async () => {
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'
+          const response = await fetch(`${baseUrl}/admin/dashboard/realtime`)
+          if (response.ok) {
+            const data = await response.json()
+            const parsed = (data.apiCalls || []).map((item: any) => {
+              const endpoint = item.endpoint || '/api/unknown'
+              const m = (endpoint as string).match(/musics\/(\d+)/)
+              const midFromEndpoint = m ? Number(m[1]) : undefined
+              const midFromPayload = (item.musicId ?? item.music_id) !== undefined ? Number(item.musicId ?? item.music_id) : undefined
+              const mid = midFromPayload ?? midFromEndpoint
+              return ({
+                id: item.id || Math.random(),
+                status: item.status || 'error',
+                endpoint,
+                callType: item.callType || (endpoint.includes('lyrics') ? '가사 호출' : '음원 호출'),
+                validity: item.validity || '유효재생',
+                company: item.company || 'Unknown',
+                musicTitle: item.musicTitle || item.music_title || item.trackTitle || item.title || undefined,
+                musicId: mid,
+                timestamp: item.timestamp || new Date().toLocaleString('ko-KR', {
+                  year: '2-digit',
+                  month: '2-digit',
+                  day: '2-digit', 
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false,
+                  timeZone: 'Asia/Seoul'
+                }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+              })
+            })
+            setRealtimeApiStatus(parsed)
+            setRealtimeTopTracks(data.topTracks || [])
+          }
+        } catch (error) {
+          // HTTP 폴링 에러 무시
+        }
+      }, 5000)
+      setHttpPollingInterval(interval)
+    }
 
     const fetchRealtimeData = async () => {
       // WebSocket이 연결되지 않은 경우에만 HTTP API 사용
