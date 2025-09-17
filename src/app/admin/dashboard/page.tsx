@@ -57,7 +57,8 @@ export default function DashboardPage() {
   // WebSocket 연결
   useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-    const newSocket = io(baseUrl, {
+    const wsUrl = baseUrl.replace(/^https?:\/\//, 'wss://').replace(/^http:\/\//, 'ws://')
+    const newSocket = io(wsUrl, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
       forceNew: true
