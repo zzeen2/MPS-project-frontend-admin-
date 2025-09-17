@@ -106,11 +106,7 @@ export default function DashboardPage() {
             })
           })
           setRealtimeApiStatus(parsed)
-        }
-        
-        if (tracksRes.ok) {
-          const tracksData = await tracksRes.json()
-          setRealtimeTopTracks(tracksData.items || [])
+          setRealtimeTopTracks(data.topTracks || [])
         }
       } catch (error) {
         // HTTP 폴링 에러 무시

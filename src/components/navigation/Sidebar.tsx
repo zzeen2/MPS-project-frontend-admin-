@@ -91,7 +91,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 w-60 border-r border-white/10 bg-neutral-900/80 text-white backdrop-blur-md p-4 flex flex-col">
+    <aside className="fixed top-0 left-0 z-50 w-60 h-screen border-r border-white/10 bg-neutral-900/80 text-white backdrop-blur-md p-4 flex flex-col">
       <div className="mb-4 px-3 text-sm font-semibold tracking-wide text-white/80">Admin</div>
 
       <nav className="space-y-2 text-sm">
