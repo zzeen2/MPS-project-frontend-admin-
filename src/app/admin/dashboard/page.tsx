@@ -79,12 +79,6 @@ export default function DashboardPage() {
               musicTitle: item.musicTitle || item.music_title || item.trackTitle || item.title || undefined,
               musicId: mid,
               timestamp: (() => {
-                console.log('🔍 timestamp 디버깅:', {
-                  original: item.timestamp,
-                  type: typeof item.timestamp,
-                  isValid: item.timestamp && !isNaN(new Date(item.timestamp).getTime())
-                })
-                
                 if (item.timestamp && !isNaN(new Date(item.timestamp).getTime())) {
                   return new Date(item.timestamp).toLocaleString('ko-KR', {
                     year: '2-digit',
@@ -112,7 +106,11 @@ export default function DashboardPage() {
             })
           })
           setRealtimeApiStatus(parsed)
-          setRealtimeTopTracks(data.topTracks || [])
+        }
+        
+        if (tracksRes.ok) {
+          const tracksData = await tracksRes.json()
+          setRealtimeTopTracks(tracksData.items || [])
         }
       } catch (error) {
         // HTTP 폴링 에러 무시
@@ -494,7 +492,7 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto min-h-96">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/10">
@@ -564,7 +562,7 @@ export default function DashboardPage() {
             <div className="mb-4">
               <Title variant="card">인기 음원 TOP 10</Title>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto min-h-96">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/10">
