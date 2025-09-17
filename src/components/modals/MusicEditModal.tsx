@@ -6,7 +6,6 @@ import Title from '@/components/ui/Title'
 type Props = { 
   open: boolean; 
   onClose: () => void; 
-  onSuccess?: () => void;
   isCreateMode?: boolean;
   musicData?: {
     id?: string;
@@ -32,7 +31,7 @@ type Props = {
   }
 }
 
-export default function MusicEditModal({ open, onClose, onSuccess, isCreateMode = false, musicData }: Props) {
+export default function MusicEditModal({ open, onClose, isCreateMode = false, musicData }: Props) {
   if (!open) {
     return null
   }
@@ -484,10 +483,7 @@ export default function MusicEditModal({ open, onClose, onSuccess, isCreateMode 
           const result = await response.json()
           console.log('음원 등록 성공:', result)
           showToastMessage(`음원 등록이 완료되었습니다!`)
-          setTimeout(() => { 
-            onClose()
-            onSuccess?.()
-          }, 1000)
+          setTimeout(() => { onClose() }, 1000)
         } else {
           const errorData = await response.json().catch(() => ({}))
           showToastMessage(`음원 등록 실패`, 'error')
@@ -565,10 +561,7 @@ export default function MusicEditModal({ open, onClose, onSuccess, isCreateMode 
         }
 
         showToastMessage('수정이 완료되었습니다!')
-        setTimeout(()=> {
-          onClose()
-          onSuccess?.()
-        }, 800)
+        setTimeout(()=> onClose(), 800)
       } catch (e) {
         console.error('수정 에러', e)
         showToastMessage('수정 중 오류가 발생했습니다.', 'error')
