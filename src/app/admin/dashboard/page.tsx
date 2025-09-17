@@ -78,27 +78,37 @@ export default function DashboardPage() {
               company: item.company || 'Unknown',
               musicTitle: item.musicTitle || item.music_title || item.trackTitle || item.title || undefined,
               musicId: mid,
-              timestamp: item.timestamp ? 
-                new Date(item.timestamp).toLocaleString('ko-KR', {
-                  year: '2-digit',
-                  month: '2-digit',
-                  day: '2-digit', 
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  hour12: false,
-                  timeZone: 'Asia/Seoul'
-                }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim() :
-                new Date().toLocaleString('ko-KR', {
-                  year: '2-digit',
-                  month: '2-digit',
-                  day: '2-digit', 
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  hour12: false,
-                  timeZone: 'Asia/Seoul'
-                }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+              timestamp: (() => {
+                console.log('🔍 timestamp 디버깅:', {
+                  original: item.timestamp,
+                  type: typeof item.timestamp,
+                  isValid: item.timestamp && !isNaN(new Date(item.timestamp).getTime())
+                })
+                
+                if (item.timestamp && !isNaN(new Date(item.timestamp).getTime())) {
+                  return new Date(item.timestamp).toLocaleString('ko-KR', {
+                    year: '2-digit',
+                    month: '2-digit',
+                    day: '2-digit', 
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false,
+                    timeZone: 'Asia/Seoul'
+                  }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+                } else {
+                  return new Date().toLocaleString('ko-KR', {
+                    year: '2-digit',
+                    month: '2-digit',
+                    day: '2-digit', 
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false,
+                    timeZone: 'Asia/Seoul'
+                  }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+                }
+              })()
             })
           })
           setRealtimeApiStatus(parsed)
@@ -287,27 +297,31 @@ export default function DashboardPage() {
                 company: item.company || 'Unknown',
                 musicTitle: item.musicTitle || item.music_title || item.trackTitle || item.title || undefined,
                 musicId: mid,
-                timestamp: item.timestamp ? 
-                  new Date(item.timestamp).toLocaleString('ko-KR', {
-                    year: '2-digit',
-                    month: '2-digit',
-                    day: '2-digit', 
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false,
-                    timeZone: 'Asia/Seoul'
-                  }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim() :
-                  new Date().toLocaleString('ko-KR', {
-                    year: '2-digit',
-                    month: '2-digit',
-                    day: '2-digit', 
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false,
-                    timeZone: 'Asia/Seoul'
-                  }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+                timestamp: (() => {
+                  if (item.timestamp && !isNaN(new Date(item.timestamp).getTime())) {
+                    return new Date(item.timestamp).toLocaleString('ko-KR', {
+                      year: '2-digit',
+                      month: '2-digit',
+                      day: '2-digit', 
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false,
+                      timeZone: 'Asia/Seoul'
+                    }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+                  } else {
+                    return new Date().toLocaleString('ko-KR', {
+                      year: '2-digit',
+                      month: '2-digit',
+                      day: '2-digit', 
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false,
+                      timeZone: 'Asia/Seoul'
+                    }).replace(/\./g, '-').replace(/- /g, ' ').replace(/(\d{2}) (\d{2}) (\d{2})/, '$1-$2-$3').trim()
+                  }
+                })()
               })
             })
             console.log('🔍 Processed API Status items:', items)
