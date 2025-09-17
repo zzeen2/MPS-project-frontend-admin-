@@ -122,6 +122,10 @@ export default function DashboardPage() {
     newSocket.on('connect_error', (error) => {
       console.error('WebSocket 연결 에러:', error)
       setIsConnected(false)
+      // WebSocket 연결 실패 시 HTTP 폴링으로 fallback
+      setTimeout(() => {
+        startHttpPolling()
+      }, 1000)
     })
 
     newSocket.on('reconnect', (attemptNumber) => {
