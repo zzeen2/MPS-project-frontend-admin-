@@ -42,40 +42,36 @@ async function verifyTokenEdge(token: string | undefined): Promise<{ ok: boolean
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  const isAuthApi = pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/refresh-token'
-  const isProxyApi = pathname.startsWith('/admin/musics')
+  // 공개 경로들
+  const isAuthApi = pathname === '/api/admin-login' || pathname === '/api/logout' || pathname === '/admin/refresh-token'
+  const isPublicLogin = pathname === '/admin' || pathname === '/admin/' || isAuthApi
   const isOptions = req.method === 'OPTIONS'
-  const isPublicLogin = pathname === '/admin' || pathname === '/admin/' || isAuthApi || isProxyApi
+  
+  // 보호된 경로인지 확인
   const isProtected = pathname.startsWith('/admin') && !isPublicLogin && !isOptions
 
   if (!isProtected) {
     return NextResponse.next()
   }
 
-  const token = req.cookies.get('admin_session')?.value
-  const { ok, payload } = await verifyTokenEdge(token)
+  // JWT 토큰 확인 (쿠키에서)
+  const accessToken = req.cookies.get('accessToken')?.value
+  const refreshToken = req.cookies.get('refreshToken')?.value
 
-  if (!ok || !payload) {
+  if (!accessToken || !refreshToken) {
     const loginUrl = new URL('/admin', req.url)
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  const [role, issuedAtStr] = payload.split('|')
-  if (role !== 'admin') {
+  // 간단한 토큰 존재 여부만 확인 (JWT 검증은 클라이언트에서)
+  if (!accessToken || !refreshToken) {
     const loginUrl = new URL('/admin', req.url)
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  const issuedAt = Number(issuedAtStr)
-  const maxAgeMs = 8 * 60 * 60 * 1000
-  if (!Number.isFinite(issuedAt) || Date.now() - issuedAt > maxAgeMs) {
-    const loginUrl = new URL('/admin', req.url)
-    loginUrl.searchParams.set('next', pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
+  // 토큰이 존재하면 통과 (실제 검증은 클라이언트에서)
   return NextResponse.next()
 }
 

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import axios from 'axios'
 import { useState } from 'react'
+import { clearAuth } from '@/lib/auth'
 
 const DASHBOARD = { href: '/admin/dashboard', label: '대시보드' }
 
@@ -47,20 +48,28 @@ export default function Sidebar() {
   const handleLogout = async() => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      await axios.post('/admin/logout', {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      if (accessToken) {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+        try {
+          await axios.post(`${baseUrl}/admin/logout`, {}, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          })
+        } catch (apiError: any) {
+          // 401 에러는 토큰이 이미 만료되었거나 무효한 경우이므로 정상적인 로그아웃으로 처리
+          if (apiError.response?.status === 401) {
+            console.log('토큰이 만료되어 서버 로그아웃이 불가능합니다. 로컬 로그아웃을 진행합니다.');
+          } else {
+            console.error("로그아웃 API 호출 실패", apiError);
+          }
         }
-      })
-      
-      // 로컬 스토리지 토큰 삭제
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('adminId');
-
-      router.push('/admin');
+      }
     } catch (error) {
-      console.error("로그아웃 실패", error);
+      console.error("로그아웃 처리 중 오류", error);
+    } finally {
+      // API 호출 성공/실패와 관계없이 로컬 토큰 삭제
+      clearAuth();
       router.push('/admin');
     }
   }

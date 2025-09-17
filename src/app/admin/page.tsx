@@ -1,8 +1,9 @@
 'use client'
-import React, { Suspense } from 'react'
+import React, { Suspense, useEffect } from 'react'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import axios from "axios"
+import { isAuthenticated } from '@/lib/auth'
 
 function LoginForm() {
     const router = useRouter();
@@ -14,6 +15,13 @@ function LoginForm() {
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string | null>(null)
 
+    // 이미 로그인된 경우 리다이렉트
+    useEffect(() => {
+        if (isAuthenticated()) {
+            router.replace(next);
+        }
+    }, [router, next]);
+
     const onSubmit = async (e : React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
@@ -24,11 +32,18 @@ function LoginForm() {
             const res = await axios.post(`${baseUrl}/admin/login`, {adminId, adminPw });
 
             if(res.status === 200) {
-                // 토큰 저장
+                // 토큰 저장 (localStorage + 쿠키)
                 const { accessToken, refreshToken, adminId } = res.data;
                 localStorage.setItem('accessToken', accessToken);
                 localStorage.setItem('refreshToken', refreshToken);
                 localStorage.setItem('adminId', adminId);
+                
+                // 쿠키에도 저장 (미들웨어용)
+                const isProduction = process.env.NODE_ENV === 'production'
+                const secureFlag = isProduction ? '; secure' : ''
+                document.cookie = `accessToken=${accessToken}; path=/; max-age=${8 * 60 * 60}${secureFlag}; samesite=strict`;
+                document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${8 * 60 * 60}${secureFlag}; samesite=strict`;
+                
                 router.replace(next);
             }else {
                 setErr(res.data?.message ?? '로그인 실패')
